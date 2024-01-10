@@ -24,6 +24,10 @@ library PerpsPrice {
          */
         bytes32 feedId;
         /**
+         * @dev the quanto price feed id for the market. This node is processed using the oracle manager which returns the quanto price.
+         */
+        bytes32 quantoFeedId;
+        /**
          * @dev strict tolerance in seconds, mainly utilized for liquidations.
          */
         uint256 strictStalenessTolerance;
@@ -40,21 +44,37 @@ library PerpsPrice {
         uint128 marketId,
         Tolerance priceTolerance
     ) internal view returns (uint price) {
+        return _getCurrentPrice(marketId, priceTolerance, false);
+    }
+
+    function getCurrentQuantoPrice(
+        uint128 marketId,
+        Tolerance priceTolerance
+    ) internal view returns (uint price) {
+        return _getCurrentPrice(marketId, priceTolerance, true);
+    }
+
+    function _getCurrentPrice(
+        uint128 marketId,
+        Tolerance priceTolerance,
+        bool isQuanto
+    ) internal view returns (uint price) {
         Data storage self = load(marketId);
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
         NodeOutput.Data memory output;
+        bytes32 feedId = isQuanto ? self.quantoFeedId : self.feedId;
         if (priceTolerance == Tolerance.STRICT) {
             bytes32[] memory runtimeKeys = new bytes32[](1);
             bytes32[] memory runtimeValues = new bytes32[](1);
             runtimeKeys[0] = bytes32("stalenessTolerance");
             runtimeValues[0] = bytes32(self.strictStalenessTolerance);
             output = INodeModule(factory.oracle).processWithRuntime(
-                self.feedId,
+                feedId,
                 runtimeKeys,
                 runtimeValues
             );
         } else {
-            output = INodeModule(factory.oracle).process(self.feedId);
+            output = INodeModule(factory.oracle).process(feedId);
         }
 
         return output.price.toUint();

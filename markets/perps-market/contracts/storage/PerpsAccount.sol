@@ -515,7 +515,8 @@ library PerpsAccount {
     function liquidatePosition(
         Data storage self,
         uint128 marketId,
-        uint256 price
+        uint256 price,
+        uint256 quantoPrice
     )
         internal
         returns (
@@ -552,6 +553,7 @@ library PerpsAccount {
                 marketId: marketId,
                 latestInteractionPrice: price.to128(),
                 latestInteractionFunding: perpsMarket.lastFundingValue.to128(),
+                latestInteractionQuantoPrice: quantoPrice.to128(),
                 size: newPositionSize
             });
         }

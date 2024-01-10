@@ -18,6 +18,7 @@ library Position {
         int128 size;
         uint128 latestInteractionPrice;
         int128 latestInteractionFunding;
+        uint128 latestInteractionQuantoPrice;
     }
 
     function update(Data storage self, Data memory newPosition) internal {

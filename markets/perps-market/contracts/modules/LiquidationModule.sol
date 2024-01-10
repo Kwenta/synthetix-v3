@@ -147,6 +147,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         bool accountFullyLiquidated;
         uint256 totalLiquidationCost;
         uint256 price;
+        uint256 quantoPrice;
         uint128 positionMarketId;
         uint256 loopIterator; // stack too deep to the extreme
     }
@@ -174,6 +175,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 runtime.positionMarketId,
                 PerpsPrice.Tolerance.STRICT
             );
+            runtime.quantoPrice = PerpsPrice.getCurrentQuantoPrice(
+                runtime.positionMarketId,
+                PerpsPrice.Tolerance.STRICT
+            );
 
             (
                 uint256 amountLiquidated,
@@ -181,7 +186,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 int128 sizeDelta,
                 uint256 oldPositionAbsSize,
                 MarketUpdate.Data memory marketUpdateData
-            ) = account.liquidatePosition(runtime.positionMarketId, runtime.price);
+            ) = account.liquidatePosition(runtime.positionMarketId, runtime.price, runtime.quantoPrice);
 
             // endorsed liquidators do not get flag rewards
             if (
