@@ -1,16 +1,13 @@
 import { ethers } from 'ethers';
 import { bn, bootstrapMarkets } from '../integration/bootstrap';
 import assertBn from '@synthetixio/core-utils/src/utils/assertions/assert-bignumber';
-import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 import assert from 'assert/strict';
 import { snapshotCheckpoint } from '@synthetixio/core-utils/utils/mocha/snapshot';
-
-import { wei } from '@synthetixio/wei';
 import { OpenPositionData, openPosition, getQuantoPnl } from '../integration/helpers';
 
 // NOTE: this is based on ModifyCollateral.withdraw.test.ts
 const sUSDSynthId = 0;
-describe.only('Quanto', () => {
+describe('Quanto', () => {
   describe('withdraw with open positions', () => {
     const perpsMarketConfigs = [
       {
@@ -206,7 +203,8 @@ describe.only('Quanto', () => {
       it('has correct margin based on quanto perps payout', async () => {
         const expectedCollateral = bn(4_000).mul(10); // $40k collateral
 
-        const quantoPnl = getQuantoPnl({ // 10k * 2 * 2 = $40k profit
+        const quantoPnl = getQuantoPnl({
+          // 10k * 2 * 2 = $40k profit
           baseAssetStartPrice: 30_000,
           baseAssetEndPrice: 40_000,
           quantoAssetStartPrice: 2_000,
