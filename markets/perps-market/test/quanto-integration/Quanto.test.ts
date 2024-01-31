@@ -46,8 +46,11 @@ describe('Quanto', () => {
         sellPrice: bn(2000),
       },
     ];
+
     const traderAccountIds = [2, 3];
+
     const trader1AccountId = traderAccountIds[0];
+
     const { systems, provider, trader1, perpsMarkets, synthMarkets } = bootstrapMarkets({
       synthMarkets: spotMarketConfig,
       perpsMarkets: perpsMarketConfigs,
@@ -57,26 +60,31 @@ describe('Quanto', () => {
         maxLiquidationReward: bn(10_000),
         maxKeeperScalingRatioD18: bn(1),
       },
-
       traderAccountIds,
     });
+
     const trader1ETHMargin = bn(10);
+
     before('trader1 buys 10 snxETH', async () => {
       const ethSpotMarketId = synthMarkets()[0].marketId();
       const usdAmount = bn(20_000);
       const minAmountReceived = trader1ETHMargin;
       const referrer = ethers.constants.AddressZero;
+
       await systems()
         .SpotMarket.connect(trader1())
         .buy(ethSpotMarketId, usdAmount, minAmountReceived, referrer);
     });
+
     before('add some stop ETH collateral to margin', async () => {
       const ethSpotMarketId = synthMarkets()[0].marketId();
+
       // approve amount of collateral to be transfered to the market
       await synthMarkets()[0]
         .synth()
         .connect(trader1())
         .approve(systems().PerpsMarket.address, ethers.constants.MaxUint256);
+
       await systems()
         .PerpsMarket.connect(trader1())
         .modifyCollateral(trader1AccountId, ethSpotMarketId, trader1ETHMargin);
@@ -86,6 +94,7 @@ describe('Quanto', () => {
       OpenPositionData,
       'systems' | 'provider' | 'trader' | 'accountId' | 'keeper'
     >;
+
     before('identify common props', async () => {
       commonOpenPositionProps = {
         systems,
@@ -95,6 +104,7 @@ describe('Quanto', () => {
         keeper: trader1(),
       };
     });
+
     before('open positions', async () => {
       const positionSizes = [
         // 2 BTC long position
@@ -109,6 +119,7 @@ describe('Quanto', () => {
         price: perpsMarketConfigs[0].price,
       });
     });
+
     describe('account check after initial positions open', () => {
       it('has correct quanto market id', async () => {
         const ethSpotMarketId = synthMarkets()[0].marketId();
@@ -118,11 +129,13 @@ describe('Quanto', () => {
           ethSpotMarketId
         );
       });
+
       it('has quanto feed id set', async () => {
         const btcPerpsMarketId = perpsMarkets()[0].marketId();
         const quantoFeedId = await systems().PerpsMarket.getQuantoFeedId(btcPerpsMarketId);
         assert(quantoFeedId.length > 0);
       });
+
       it('should have correct open interest', async () => {
         const expectedOi = 60_000; // 2 BTC * 30k
         assertBn.equal(
@@ -130,6 +143,7 @@ describe('Quanto', () => {
           bn(expectedOi)
         );
       });
+
       it('has no pnl, given skewScale is set to zero', async () => {
         const [btcPnl] = await systems().PerpsMarket.getOpenPosition(
           trader1AccountId,
@@ -137,6 +151,7 @@ describe('Quanto', () => {
         );
         assertBn.equal(btcPnl, 0);
       });
+
       it('has correct available margin', async () => {
         assertBn.equal(
           await systems().PerpsMarket.getAvailableMargin(trader1AccountId),
@@ -144,6 +159,7 @@ describe('Quanto', () => {
         );
       });
     });
+
     describe('allow withdraw when its less than collateral available for withdraw', () => {
       const restore = snapshotCheckpoint(provider);
 
@@ -155,6 +171,7 @@ describe('Quanto', () => {
         [initialMarginReq] = await systems()
           .PerpsMarket.connect(trader1())
           .getRequiredMargins(trader1AccountId);
+
         // available margin = collateral value + pnl = $19000
         const withdrawAmt = bn(20_000).sub(initialMarginReq).mul(-1).div(2000);
 
@@ -162,6 +179,7 @@ describe('Quanto', () => {
           .PerpsMarket.connect(trader1())
           .modifyCollateral(trader1AccountId, ethSpotMarketId, withdrawAmt);
       });
+
       after(restore);
 
       it('has correct available margin', async () => {
@@ -171,6 +189,7 @@ describe('Quanto', () => {
         );
       });
     });
+
     describe('pnl adjusts correctly', () => {
       before('check initial margin is as expected', async () => {
         assertBn.equal(
@@ -178,6 +197,7 @@ describe('Quanto', () => {
           bn(2_000).mul(10)
         );
       });
+
       before('btc pumps', async () => {
         await perpsMarkets()[0].aggregator().mockSetCurrentPrice(bn(40_000));
       });
@@ -202,7 +222,6 @@ describe('Quanto', () => {
 
       it('has correct margin based on quanto perps payout', async () => {
         const expectedCollateral = bn(4_000).mul(10); // $40k collateral
-
         const quantoPnl = getQuantoPnl({
           // 10k * 2 * 2 = $40k profit
           baseAssetStartPrice: 30_000,
