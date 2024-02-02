@@ -3,10 +3,9 @@ import { bn, bootstrapMarkets } from '../integration/bootstrap';
 import assertBn from '@synthetixio/core-utils/src/utils/assertions/assert-bignumber';
 import assert from 'assert/strict';
 import { snapshotCheckpoint } from '@synthetixio/core-utils/utils/mocha/snapshot';
-import { OpenPositionData, openPosition, getQuantoPnl } from '../integration/helpers';
+import { OpenPositionData, openPosition, getQuantoPnl, getQuantoPositionSize } from '../integration/helpers';
 
 // NOTE: this is based on ModifyCollateral.withdraw.test.ts
-const sUSDSynthId = 0;
 describe('Quanto', () => {
   describe('withdraw with open positions', () => {
     const perpsMarketConfigs = [
@@ -106,9 +105,13 @@ describe('Quanto', () => {
     });
 
     before('open positions', async () => {
+      // 2 BTC long position
+      const posSize = getQuantoPositionSize({
+        sizeInBaseAsset: bn(2),
+        quantoAssetPrice: bn(2_000)
+      });
       const positionSizes = [
-        // 2 BTC long position
-        bn(2),
+        posSize,
       ];
 
       await openPosition({
@@ -204,10 +207,12 @@ describe('Quanto', () => {
 
       before('eth pumps', async () => {
         // TODO: adjust bootstrap so that the same aggregator/oracle is used for the spot market and the perps market
+        // TODO: we should be able to set the price of all these aggregators in a single go
         // update eth price on perps market (effects USD pnl)
         await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(4_000));
         // update eth price on synth market (effects collateral value)
         await synthMarkets()[0].sellAggregator().mockSetCurrentPrice(bn(4_000));
+        await synthMarkets()[0].buyAggregator().mockSetCurrentPrice(bn(4_000));
       });
 
       it('does not have the amount of margin for a classic perps payout', async () => {
@@ -222,43 +227,68 @@ describe('Quanto', () => {
 
       it('has correct margin based on quanto perps payout', async () => {
         const expectedCollateral = bn(4_000).mul(10); // $40k collateral
-        const quantoPnl = getQuantoPnl({
-          // 10k * 2 * 2 = $40k profit
-          baseAssetStartPrice: 30_000,
-          baseAssetEndPrice: 40_000,
-          quantoAssetStartPrice: 2_000,
-          quantoAssetEndPrice: 4_000,
-          baseAssetSizeDelta: 2,
+        const quantoPnl = getQuantoPnl({ // 10k * 2 * 2 = $40k profit
+          baseAssetStartPrice: bn(30_000),
+          baseAssetEndPrice: bn(40_000),
+          quantoAssetStartPrice: bn(2_000),
+          quantoAssetEndPrice: bn(4_000),
+          baseAssetSizeDelta: bn(2),
         });
 
-        const expectedMargin = expectedCollateral.add(bn(quantoPnl));
+        const expectedMargin = expectedCollateral.add(quantoPnl);
 
         // check the pnl
         const availableMargin = await systems().PerpsMarket.getAvailableMargin(trader1AccountId);
         assertBn.equal(availableMargin, expectedMargin);
       });
 
-      it('trader can withdraw all his quanto margin and winnings as sUSD', async () => {
-        const expectedCollateral = bn(4_000).mul(10); // $40k collateral
+      it('trader can withdraw all his quanto margin and winnings as sETH', async () => {
+        const btcPerpsMarketId = perpsMarkets()[0].marketId();
+        const ethSpotMarketId = synthMarkets()[0].marketId();
+        const ethSynthAddress = synthMarkets()[0].synthAddress();
+        const trader1Address = await trader1().getAddress();
 
-        const quantoPnl = getQuantoPnl({
-          baseAssetStartPrice: 30_000,
-          baseAssetEndPrice: 40_000,
-          quantoAssetStartPrice: 2_000,
-          quantoAssetEndPrice: 4_000,
-          baseAssetSizeDelta: 2,
+        // check position is open
+        const positionOpen = await systems().PerpsMarket.connect(trader1()).getOpenPosition(trader1AccountId, btcPerpsMarketId);
+        assertBn.equal(positionOpen.positionSize, bn(0.001));
+
+        // close out position (calculate same position size that was opened and multiply by -1)
+        const posSize = getQuantoPositionSize({
+          sizeInBaseAsset: bn(2),
+          quantoAssetPrice: bn(2_000)
+        }).mul(-1);
+
+        // close position
+        await openPosition({
+          ...commonOpenPositionProps,
+          marketId: btcPerpsMarketId,
+          sizeDelta: posSize,
+          settlementStrategyId: perpsMarkets()[0].strategyId(),
+          price: bn(40_000),
         });
 
-        const withdrawAmt = expectedCollateral.add(bn(quantoPnl));
-
-        const trader1Address = await trader1().getAddress();
-        const balBeforeWithdraw = await systems().USD.connect(trader1()).balanceOf(trader1Address);
-
+        // check position is closed
+        const positionClosed = await systems().PerpsMarket.connect(trader1()).getOpenPosition(trader1AccountId, btcPerpsMarketId);
+        assertBn.equal(positionClosed.positionSize, bn(0));
+        
+        const balBeforeWithdraw = await systems().Synth(ethSynthAddress).balanceOf(trader1Address);
+        
+        // withdraw all collateral and winnings
+        const quantoPnl = getQuantoPnl({
+          baseAssetStartPrice: bn(30_000),
+          baseAssetEndPrice: bn(40_000),
+          quantoAssetStartPrice: bn(2_000),
+          quantoAssetEndPrice: bn(4_000),
+          baseAssetSizeDelta: bn(2),
+        });
+        const expectedCollateral = bn(4_000).mul(10); // $40k collateral
+        const withdrawAmt = expectedCollateral.add(quantoPnl).div(4_000).mul(-1);
         await systems()
           .PerpsMarket.connect(trader1())
-          .modifyCollateral(trader1AccountId, sUSDSynthId, withdrawAmt);
+          .modifyCollateral(trader1AccountId, ethSpotMarketId, withdrawAmt);
 
-        const balAfterWithdraw = await systems().USD.connect(trader1()).balanceOf(trader1Address);
+        // check everything was withdrawn
+        const balAfterWithdraw = await systems().Synth(ethSynthAddress).balanceOf(trader1Address);
         assertBn.equal(balBeforeWithdraw.sub(balAfterWithdraw), withdrawAmt);
       });
     });
