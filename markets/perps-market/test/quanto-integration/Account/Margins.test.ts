@@ -178,20 +178,20 @@ describe('Account margins test', () => {
 
       initialPnl = btcPnl.add(ethPnl);
 
-      btcPnlQuanto = getQuantoPnl({
-        baseAssetStartPrice: 30_000,
-        baseAssetEndPrice: 30_000,
-        quantoAssetStartPrice: 2_000,
-        quantoAssetEndPrice: 2_000,
-        baseAssetSizeDelta: -2,
-      });
-      ethPnlQuanto = getQuantoPnl({
-        baseAssetStartPrice: 2_000,
-        baseAssetEndPrice: 2_000,
-        quantoAssetStartPrice: 2_000,
-        quantoAssetEndPrice: 2_000,
-        baseAssetSizeDelta: 20,
-      });
+      // btcPnlQuanto = getQuantoPnl({
+      //   baseAssetStartPrice: 30_000,
+      //   baseAssetEndPrice: 30_000,
+      //   quantoAssetStartPrice: 2_000,
+      //   quantoAssetEndPrice: 2_000,
+      //   baseAssetSizeDelta: -2,
+      // });
+      // ethPnlQuanto = getQuantoPnl({
+      //   baseAssetStartPrice: 2_000,
+      //   baseAssetEndPrice: 2_000,
+      //   quantoAssetStartPrice: 2_000,
+      //   quantoAssetEndPrice: 2_000,
+      //   baseAssetSizeDelta: 20,
+      // });
 
       initialPnlQuanto = btcPnlQuanto + ethPnlQuanto;
 
