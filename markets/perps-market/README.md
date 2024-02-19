@@ -1,32 +1,66 @@
-# Perpetual Futures Market
+## Foundry
 
-This system generates markets that allow traders to open positions (ERC-721 tokens) that are long or short with leverage after depositing collateral as margin.
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-## Developer Get Started
+Foundry consists of:
 
-1. Ensure you have [IPFS Desktop](https://docs.ipfs.tech/install/ipfs-desktop/) running
-2. Run `yarn` at the root directory: `/synthetix-v3`.
-3. Run `yarn cannon setup` to configure cannon
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-- Run `cat ~/.local/share/cannon/settings.json` and ensure your `ipfsUrl` is configured to `http://localhost:5001`. If it's still unable to find your IPFS local node, try using `http://0.0.0.0:5001`.
+## Documentation
 
-4. Run `yarn build` at the root directory: `/synthetix-v3`.
-5. Run `yarn test` in the synthetix protocol directory: `/protocol/synthetix`.
+https://book.getfoundry.sh/
 
-- This will create `synthetix-testable` version and throw it into your local IPFS cluster.
+## Usage
 
-6. Run `yarn test` in the spot market directory: `/markets/spot-market`.
+### Build
 
-- This will create a `spot-market-testable` version and throw it into your local IPFS cluster.
+```shell
+$ forge build
+```
 
-7. Run `yarn test` in the perps market directory: `/markets/perps-market`.
+### Test
 
-- The perps market is composed of both the synthetix core and spot market contracts and uses the testable versions to create a testable perps market environment.
+```shell
+$ forge test
+```
 
-If you have passing tests at this point, **congrats**, you are all set for development.
+### Format
 
-## Troubleshooting
+```shell
+$ forge fmt
+```
 
-If you experience any unexpected errors try running:
+### Gas Snapshots
 
-- `yarn clean`
+```shell
+$ forge snapshot
+```
+
+### Anvil
+
+```shell
+$ anvil
+```
+
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
+```
