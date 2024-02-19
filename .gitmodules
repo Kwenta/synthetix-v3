@@ -1,0 +1,3 @@
+[submodule "markets/perps-market/lib/forge-std"]
+	path = markets/perps-market/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
