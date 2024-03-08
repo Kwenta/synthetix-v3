@@ -2,6 +2,7 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
+import {BaseQuantoPerUSDUint256} from "quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Module for updating configuration in relation to async order modules.
@@ -230,7 +231,7 @@ interface IMarketConfigurationModule {
      */
     function setMaxMarketSize(
         uint128 marketId,
-        uint256 maxMarketSize,
+        BaseQuantoPerUSDUint256 maxMarketSize,
         uint256 maxMarketValue
     ) external;
 
