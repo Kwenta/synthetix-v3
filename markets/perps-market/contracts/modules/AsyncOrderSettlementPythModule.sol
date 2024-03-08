@@ -21,17 +21,19 @@ import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {USDUint256, USDPerBaseUint256, QuantoUint256, USDPerQuantoUint256, InteractionsQuantoUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {
+    USDUint256,
+    USDPerBaseUint256,
+    QuantoUint256,
+    USDPerQuantoUint256,
+    InteractionsQuantoUint256
+} from "quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Module for settling async orders using pyth as price feed.
  * @dev See IAsyncOrderSettlementPythModule.
  */
-contract AsyncOrderSettlementPythModule is
-    IAsyncOrderSettlementPythModule,
-    IMarketEvents,
-    IAccountEvents
-{
+contract AsyncOrderSettlementPythModule is IAsyncOrderSettlementPythModule, IMarketEvents, IAccountEvents {
     using SafeCastI256 for int256;
     using SafeCastU256 for uint256;
     using PerpsAccount for PerpsAccount.Data;
@@ -50,16 +52,12 @@ contract AsyncOrderSettlementPythModule is
     function settleOrder(uint128 accountId) external {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
-        (
-            AsyncOrder.Data storage asyncOrder,
-            SettlementStrategy.Data storage settlementStrategy
-        ) = AsyncOrder.loadValid(accountId);
+        (AsyncOrder.Data storage asyncOrder, SettlementStrategy.Data storage settlementStrategy) =
+            AsyncOrder.loadValid(accountId);
 
-        int256 offchainPrice = IPythERC7412Wrapper(settlementStrategy.priceVerificationContract)
-            .getBenchmarkPrice(
-                settlementStrategy.feedId,
-                (asyncOrder.commitmentTime + settlementStrategy.commitmentPriceDelay).to64()
-            );
+        int256 offchainPrice = IPythERC7412Wrapper(settlementStrategy.priceVerificationContract).getBenchmarkPrice(
+            settlementStrategy.feedId, (asyncOrder.commitmentTime + settlementStrategy.commitmentPriceDelay).to64()
+        );
 
         _settleOrder(USDPerBaseUint256.wrap(offchainPrice.toUint()), asyncOrder, settlementStrategy);
     }
@@ -79,8 +77,8 @@ contract AsyncOrderSettlementPythModule is
         GlobalPerpsMarket.load().checkLiquidation(runtime.accountId);
 
         Position.Data storage oldPosition;
-        (runtime.newPosition, runtime.totalFees, runtime.fillPrice, oldPosition) = asyncOrder
-            .validateRequest(settlementStrategy, price);
+        (runtime.newPosition, runtime.totalFees, runtime.fillPrice, oldPosition) =
+            asyncOrder.validateRequest(settlementStrategy, price);
 
         runtime.amountToDeduct = runtime.totalFees;
         runtime.sizeDelta = asyncOrder.request.sizeDelta;
@@ -89,26 +87,21 @@ contract AsyncOrderSettlementPythModule is
         PerpsAccount.Data storage perpsAccount = PerpsAccount.load(runtime.accountId);
 
         // use fill price to calculate realized pnl
-        (runtime.pnl, , runtime.chargedInterest, runtime.accruedFunding, , ) = oldPosition.getPnl(
-            runtime.fillPrice
-        );
+        (runtime.pnl,, runtime.chargedInterest, runtime.accruedFunding,,) = oldPosition.getPnl(runtime.fillPrice);
         runtime.pnlUint = QuantoUint256.wrap(MathUtil.abs(runtime.pnl.unwrap()));
 
         if (runtime.pnl.unwrap() > 0) {
-            PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
-                runtime.marketId
-            );
+            PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(runtime.marketId);
             perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
         } else if (runtime.pnl.unwrap() < 0) {
-            USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
+            USDPerQuantoUint256 quantoPrice =
+                PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
 
         // after pnl is realized, update position
-        runtime.updateData = PerpsMarket.loadValid(runtime.marketId).updatePositionData(
-            runtime.accountId,
-            runtime.newPosition
-        );
+        runtime.updateData =
+            PerpsMarket.loadValid(runtime.marketId).updatePositionData(runtime.accountId, runtime.newPosition);
         perpsAccount.updateOpenPositions(runtime.marketId, runtime.newPosition.size.unwrap());
 
         emit MarketUpdated(
@@ -125,9 +118,7 @@ contract AsyncOrderSettlementPythModule is
         // since margin is deposited when trader deposits, as long as the owed collateral is deducted
         // from internal accounting, fees are automatically realized by the stakers
         if (runtime.amountToDeduct.unwrap() > 0) {
-            (runtime.deductedSynthIds, runtime.deductedAmount) = perpsAccount.deductFromAccount(
-                runtime.amountToDeduct
-            );
+            (runtime.deductedSynthIds, runtime.deductedAmount) = perpsAccount.deductFromAccount(runtime.amountToDeduct);
             for (
                 runtime.synthDeductionIterator = 0;
                 runtime.synthDeductionIterator < runtime.deductedSynthIds.length;
@@ -142,22 +133,18 @@ contract AsyncOrderSettlementPythModule is
                 }
             }
         }
-        runtime.settlementReward =
-            settlementStrategy.settlementReward +
-            KeeperCosts.load().getSettlementKeeperCosts();
+        runtime.settlementReward = settlementStrategy.settlementReward + KeeperCosts.load().getSettlementKeeperCosts();
 
         if (runtime.settlementReward.unwrap() > 0) {
             // pay keeper
             factory.withdrawMarketUsd(ERC2771Context._msgSender(), runtime.settlementReward);
         }
 
-        (runtime.referralFees, runtime.feeCollectorFees) = GlobalPerpsMarketConfiguration
-            .load()
-            .collectFees(
-                (runtime.totalFees - runtime.settlementReward).unwrap(), // totalFees includes settlement reward so we remove it
-                asyncOrder.request.referrer,
-                factory
-            );
+        (runtime.referralFees, runtime.feeCollectorFees) = GlobalPerpsMarketConfiguration.load().collectFees(
+            (runtime.totalFees - runtime.settlementReward).unwrap(), // totalFees includes settlement reward so we remove it
+            asyncOrder.request.referrer,
+            factory
+        );
 
         // trader can now commit a new order
         asyncOrder.reset();
