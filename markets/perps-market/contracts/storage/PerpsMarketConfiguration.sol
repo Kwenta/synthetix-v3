@@ -28,7 +28,7 @@ library PerpsMarketConfiguration {
     struct Data {
         OrderFee.Data orderFees;
         SettlementStrategy.Data[] settlementStrategies;
-        uint256 maxMarketSize; // oi cap in units of asset
+        BaseQuantoPerUSDUint256 maxMarketSize; // oi cap in units of asset
         uint256 maxFundingVelocity;
         uint256 skewScale;
         /**

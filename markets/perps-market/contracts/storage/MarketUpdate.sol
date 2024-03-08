@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
+import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256} from "quanto-dimensions/src/UnitTypes.sol";
+
 /**
  * @title MarketUpdateData
  */
@@ -9,8 +11,8 @@ library MarketUpdate {
     struct Data {
         uint128 marketId;
         uint128 interestRate;
-        int256 skew;
-        uint256 size;
+        BaseQuantoPerUSDInt256 skew;
+        BaseQuantoPerUSDUint256 size;
         int256 currentFundingRate;
         int256 currentFundingVelocity;
     }

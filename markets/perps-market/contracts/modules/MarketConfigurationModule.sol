@@ -6,6 +6,7 @@ import {IMarketConfigurationModule} from "../interfaces/IMarketConfigurationModu
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol";
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
+import {BaseQuantoPerUSDUint256} from "quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Module for updating configuration in relation to async order modules.
@@ -172,14 +173,14 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
      */
     function setMaxMarketSize(
         uint128 marketId,
-        uint256 maxMarketSize,
+        BaseQuantoPerUSDUint256 maxMarketSize,
         uint256 maxMarketValue
     ) external override {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
         config.maxMarketSize = maxMarketSize;
         config.maxMarketValue = maxMarketValue;
-        emit MaxMarketSizeSet(marketId, maxMarketSize, maxMarketValue);
+        emit MaxMarketSizeSet(marketId, maxMarketSize.unwrap(), maxMarketValue);
     }
 
     /**
@@ -347,7 +348,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
     ) external view override returns (uint256 maxMarketSize) {
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
 
-        maxMarketSize = config.maxMarketSize;
+        maxMarketSize = config.maxMarketSize.unwrap();
     }
 
     /**

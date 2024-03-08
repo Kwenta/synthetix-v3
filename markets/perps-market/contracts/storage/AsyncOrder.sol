@@ -346,8 +346,8 @@ library AsyncOrder {
             marketConfig.maxMarketSize,
             marketConfig.maxMarketValue,
             orderPrice.unwrap(),
-            oldPosition.size.unwrap(),
-            runtime.newPositionSize.unwrap()
+            oldPosition.size,
+            runtime.newPositionSize
         );
 
         runtime.totalRequiredMargin =

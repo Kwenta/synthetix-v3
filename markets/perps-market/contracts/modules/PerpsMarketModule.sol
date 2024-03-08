@@ -6,7 +6,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
 import {IPerpsMarketModule} from "../interfaces/IPerpsMarketModule.sol";
-import {BaseQuantoPerUSDInt128, USDPerBaseUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256} from 'quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for getting perps market information.
@@ -36,14 +36,14 @@ contract PerpsMarketModule is IPerpsMarketModule {
      * @inheritdoc IPerpsMarketModule
      */
     function size(uint128 marketId) external view override returns (uint256) {
-        return PerpsMarket.load(marketId).size;
+        return PerpsMarket.load(marketId).size.unwrap();
     }
 
     /**
      * @inheritdoc IPerpsMarketModule
      */
     function maxOpenInterest(uint128 marketId) external view override returns (uint256) {
-        return PerpsMarketConfiguration.load(marketId).maxMarketSize;
+        return PerpsMarketConfiguration.load(marketId).maxMarketSize.unwrap();
     }
 
     /**
@@ -94,7 +94,7 @@ contract PerpsMarketModule is IPerpsMarketModule {
         return
             MarketSummary({
                 skew: market.skew.unwrap(),
-                size: market.size,
+                size: market.size.unwrap(),
                 maxOpenInterest: this.maxOpenInterest(marketId),
                 currentFundingRate: market.currentFundingRate(),
                 currentFundingVelocity: market.currentFundingVelocity(),

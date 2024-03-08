@@ -107,8 +107,8 @@ contract AsyncOrderSettlementPythModule is IAsyncOrderSettlementPythModule, IMar
         emit MarketUpdated(
             runtime.updateData.marketId,
             price.unwrap(),
-            runtime.updateData.skew,
-            runtime.updateData.size,
+            runtime.updateData.skew.unwrap(),
+            runtime.updateData.size.unwrap(),
             runtime.sizeDelta.unwrap(),
             runtime.updateData.currentFundingRate,
             runtime.updateData.currentFundingVelocity,

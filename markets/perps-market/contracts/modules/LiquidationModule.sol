@@ -19,7 +19,7 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
 import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
-import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256} from 'quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for liquidating accounts.
@@ -221,8 +221,8 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             emit MarketUpdated(
                 runtime.positionMarketId,
                 runtime.price.unwrap(),
-                marketUpdateData.skew,
-                marketUpdateData.size,
+                marketUpdateData.skew.unwrap(),
+                marketUpdateData.size.unwrap(),
                 sizeDelta,
                 marketUpdateData.currentFundingRate,
                 marketUpdateData.currentFundingVelocity,
