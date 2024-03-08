@@ -3,7 +3,13 @@ pragma solidity >=0.8.11 <0.9.0;
 
 import {Position} from "../storage/Position.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
-import {USDPerBaseUint256, USDUint256, QuantoUint256, QuantoInt256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {
+    USDPerBaseUint256,
+    USDUint256,
+    QuantoUint256,
+    QuantoInt256,
+    BaseQuantoPerUSDInt128
+} from "quanto-dimensions/src/UnitTypes.sol";
 
 interface IAsyncOrderSettlementPythModule {
     /**
@@ -49,7 +55,7 @@ interface IAsyncOrderSettlementPythModule {
     struct SettleOrderRuntime {
         uint128 marketId;
         uint128 accountId;
-        int128 sizeDelta;
+        BaseQuantoPerUSDInt128 sizeDelta;
         QuantoInt256 pnl;
         QuantoUint256 chargedInterest;
         QuantoInt256 accruedFunding;
