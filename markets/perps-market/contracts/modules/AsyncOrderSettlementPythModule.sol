@@ -83,7 +83,7 @@ contract AsyncOrderSettlementPythModule is
             .validateRequest(settlementStrategy, price);
 
         runtime.amountToDeduct = runtime.totalFees;
-        runtime.sizeDelta = asyncOrder.request.sizeDelta.unwrap();
+        runtime.sizeDelta = asyncOrder.request.sizeDelta;
 
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
         PerpsAccount.Data storage perpsAccount = PerpsAccount.load(runtime.accountId);
@@ -116,7 +116,7 @@ contract AsyncOrderSettlementPythModule is
             price.unwrap(),
             runtime.updateData.skew,
             runtime.updateData.size,
-            runtime.sizeDelta,
+            runtime.sizeDelta.unwrap(),
             runtime.updateData.currentFundingRate,
             runtime.updateData.currentFundingVelocity,
             runtime.updateData.interestRate
@@ -172,7 +172,7 @@ contract AsyncOrderSettlementPythModule is
             runtime.fillPrice.unwrap(),
             runtime.pnl.unwrap(),
             runtime.accruedFunding.unwrap(),
-            runtime.sizeDelta,
+            runtime.sizeDelta.unwrap(),
             runtime.newPosition.size.unwrap(),
             runtime.totalFees.unwrap(),
             runtime.referralFees,
