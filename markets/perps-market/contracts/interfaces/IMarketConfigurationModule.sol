@@ -15,9 +15,7 @@ interface IMarketConfigurationModule {
      * @param strategyId the newly created settlement strategy id.
      */
     event SettlementStrategyAdded(
-        uint128 indexed marketId,
-        SettlementStrategy.Data strategy,
-        uint256 indexed strategyId
+        uint128 indexed marketId, SettlementStrategy.Data strategy, uint256 indexed strategyId
     );
 
     /**
@@ -26,11 +24,7 @@ interface IMarketConfigurationModule {
      * @param strategyId the newly created settlement strategy id.
      * @param strategy the strategy configuration.
      */
-    event SettlementStrategySet(
-        uint128 indexed marketId,
-        uint256 indexed strategyId,
-        SettlementStrategy.Data strategy
-    );
+    event SettlementStrategySet(uint128 indexed marketId, uint256 indexed strategyId, SettlementStrategy.Data strategy);
 
     /**
      * @notice Gets fired when feed id for perps market is updated.
@@ -38,11 +32,7 @@ interface IMarketConfigurationModule {
      * @param feedId oracle node id
      * @param strictStalenessTolerance strict price tolerance in seconds (used for liquidations primarily)
      */
-    event MarketPriceDataUpdated(
-        uint128 indexed marketId,
-        bytes32 feedId,
-        uint256 strictStalenessTolerance
-    );
+    event MarketPriceDataUpdated(uint128 indexed marketId, bytes32 feedId, uint256 strictStalenessTolerance);
 
     /**
      * @notice Gets fired when quanto feed id for perps market is updated.
@@ -65,11 +55,7 @@ interface IMarketConfigurationModule {
      * @param skewScale the skew scale.
      * @param maxFundingVelocity the max funding velocity.
      */
-    event FundingParametersSet(
-        uint128 indexed marketId,
-        uint256 skewScale,
-        uint256 maxFundingVelocity
-    );
+    event FundingParametersSet(uint128 indexed marketId, uint256 skewScale, uint256 maxFundingVelocity);
 
     /**
      * @notice Gets fired when parameters for max liquidation are set
@@ -128,10 +114,9 @@ interface IMarketConfigurationModule {
      * @param strategy strategy details (see SettlementStrategy.Data struct).
      * @return strategyId id of the new settlement strategy.
      */
-    function addSettlementStrategy(
-        uint128 marketId,
-        SettlementStrategy.Data memory strategy
-    ) external returns (uint256 strategyId);
+    function addSettlementStrategy(uint128 marketId, SettlementStrategy.Data memory strategy)
+        external
+        returns (uint256 strategyId);
 
     /**
      * @notice updates a settlement strategy for a market with this function.
@@ -139,11 +124,8 @@ interface IMarketConfigurationModule {
      * @param strategyId the specific strategy id.
      * @param strategy strategy details (see SettlementStrategy.Data struct).
      */
-    function setSettlementStrategy(
-        uint128 marketId,
-        uint256 strategyId,
-        SettlementStrategy.Data memory strategy
-    ) external;
+    function setSettlementStrategy(uint128 marketId, uint256 strategyId, SettlementStrategy.Data memory strategy)
+        external;
 
     /**
      * @notice Set order fees for a market with this function.
@@ -159,11 +141,7 @@ interface IMarketConfigurationModule {
      * @param feedId the node feed id
      * @param strictStalenessTolerance strict price tolerance in seconds (used for liquidations primarily)
      */
-    function updatePriceData(
-        uint128 perpsMarketId,
-        bytes32 feedId,
-        uint256 strictStalenessTolerance
-    ) external;
+    function updatePriceData(uint128 perpsMarketId, bytes32 feedId, uint256 strictStalenessTolerance) external;
 
     /**
      * @notice Set quanto node id for perps market
@@ -171,10 +149,7 @@ interface IMarketConfigurationModule {
      * @param quantoFeedId the node feed id for quanto asset
      * @dev if the quantoFeedId is not set, the market defaults to acting as a classic perps market
      */
-    function setQuantoFeedId(
-        uint128 perpsMarketId,
-        bytes32 quantoFeedId
-    ) external;
+    function setQuantoFeedId(uint128 perpsMarketId, bytes32 quantoFeedId) external;
 
     /**
      * @notice Set funding parameters for a market with this function.
@@ -182,11 +157,7 @@ interface IMarketConfigurationModule {
      * @param skewScale the skew scale.
      * @param maxFundingVelocity the max funding velocity.
      */
-    function setFundingParameters(
-        uint128 marketId,
-        uint256 skewScale,
-        uint256 maxFundingVelocity
-    ) external;
+    function setFundingParameters(uint128 marketId, uint256 skewScale, uint256 maxFundingVelocity) external;
 
     /**
      * @notice Set liquidation parameters for a market with this function.
@@ -229,11 +200,8 @@ interface IMarketConfigurationModule {
      * @param maxMarketSize the max market size in market asset units.
      * @param maxMarketValue the max market size in market USD value.
      */
-    function setMaxMarketSize(
-        uint128 marketId,
-        BaseQuantoPerUSDUint256 maxMarketSize,
-        uint256 maxMarketValue
-    ) external;
+    function setMaxMarketSize(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize, uint256 maxMarketValue)
+        external;
 
     /**
      * @notice Set the locked OI Ratio for a market with this function.
@@ -248,11 +216,7 @@ interface IMarketConfigurationModule {
      * @param strategyId the specific strategy.
      * @param enabled whether the strategy is enabled or disabled.
      */
-    function setSettlementStrategyEnabled(
-        uint128 marketId,
-        uint256 strategyId,
-        bool enabled
-    ) external;
+    function setSettlementStrategyEnabled(uint128 marketId, uint256 strategyId, bool enabled) external;
 
     /**
      * @notice Gets the settlement strategy details.
@@ -260,10 +224,10 @@ interface IMarketConfigurationModule {
      * @param strategyId id of the settlement strategy.
      * @return settlementStrategy strategy details (see SettlementStrategy.Data struct).
      */
-    function getSettlementStrategy(
-        uint128 marketId,
-        uint256 strategyId
-    ) external view returns (SettlementStrategy.Data memory settlementStrategy);
+    function getSettlementStrategy(uint128 marketId, uint256 strategyId)
+        external
+        view
+        returns (SettlementStrategy.Data memory settlementStrategy);
 
     /**
      * @notice Gets liquidation parameters details of a market.
@@ -273,9 +237,7 @@ interface IMarketConfigurationModule {
      * @return maxLiquidationPd max allowed pd when calculating max liquidation amount
      * @return endorsedLiquidator address of the endorsed liquidator who can fully liquidate accounts without any restriction
      */
-    function getMaxLiquidationParameters(
-        uint128 marketId
-    )
+    function getMaxLiquidationParameters(uint128 marketId)
         external
         view
         returns (
@@ -294,9 +256,7 @@ interface IMarketConfigurationModule {
      * @return flagRewardRatioD18 the flag reward ratio (as decimal with 18 digits precision).
      * @return minimumPositionMargin the minimum position margin.
      */
-    function getLiquidationParameters(
-        uint128 marketId
-    )
+    function getLiquidationParameters(uint128 marketId)
         external
         view
         returns (
@@ -313,9 +273,10 @@ interface IMarketConfigurationModule {
      * @return skewScale the skew scale.
      * @return maxFundingVelocity the max funding velocity.
      */
-    function getFundingParameters(
-        uint128 marketId
-    ) external view returns (uint256 skewScale, uint256 maxFundingVelocity);
+    function getFundingParameters(uint128 marketId)
+        external
+        view
+        returns (uint256 skewScale, uint256 maxFundingVelocity);
 
     /**
      * @notice Gets the max size of an specific market.
@@ -337,9 +298,7 @@ interface IMarketConfigurationModule {
      * @return makerFeeRatio the maker fee ratio.
      * @return takerFeeRatio the taker fee ratio.
      */
-    function getOrderFees(
-        uint128 marketId
-    ) external view returns (uint256 makerFeeRatio, uint256 takerFeeRatio);
+    function getOrderFees(uint128 marketId) external view returns (uint256 makerFeeRatio, uint256 takerFeeRatio);
 
     /**
      * @notice Gets the locked OI ratio of a market.
@@ -354,16 +313,15 @@ interface IMarketConfigurationModule {
      * @return feedId the node feed id to get price
      * @param strictStalenessTolerance configured strict price tolerance in seconds
      */
-    function getPriceData(
-        uint128 perpsMarketId
-    ) external view returns (bytes32 feedId, uint256 strictStalenessTolerance);
+    function getPriceData(uint128 perpsMarketId)
+        external
+        view
+        returns (bytes32 feedId, uint256 strictStalenessTolerance);
 
     /**
      * @notice Gets the quanto feed id for a specific perps market.
      * @param perpsMarketId id of perps market
      * @return quantoFeedId oracle node id for quanto feed
-     */ 
-     function getQuantoFeedId(
-         uint128 perpsMarketId
-     ) external view returns (bytes32 quantoFeedId);
+     */
+    function getQuantoFeedId(uint128 perpsMarketId) external view returns (bytes32 quantoFeedId);
 }

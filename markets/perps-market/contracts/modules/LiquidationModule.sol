@@ -19,7 +19,14 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
 import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
-import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {
+    QuantoUint256,
+    USDUint256,
+    USDInt256,
+    USDPerBaseUint256,
+    BaseQuantoPerUSDInt256,
+    BaseQuantoPerUSDUint256
+} from "quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Module for liquidating accounts.
@@ -42,9 +49,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
     function liquidate(uint128 accountId) external override returns (uint256 liquidationReward) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
-        SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket
-            .load()
-            .liquidatableAccounts;
+        SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket.load().liquidatableAccounts;
         PerpsAccount.Data storage account = PerpsAccount.load(accountId);
         if (!liquidatableAccounts.contains(accountId)) {
             (
@@ -78,20 +83,12 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
     /**
      * @inheritdoc ILiquidationModule
      */
-    function liquidateFlagged(
-        uint256 maxNumberOfAccounts
-    ) external override returns (uint256 liquidationReward) {
+    function liquidateFlagged(uint256 maxNumberOfAccounts) external override returns (uint256 liquidationReward) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
-        uint256[] memory liquidatableAccounts = GlobalPerpsMarket
-            .load()
-            .liquidatableAccounts
-            .values();
+        uint256[] memory liquidatableAccounts = GlobalPerpsMarket.load().liquidatableAccounts.values();
 
-        uint256 numberOfAccountsToLiquidate = MathUtil.min(
-            maxNumberOfAccounts,
-            liquidatableAccounts.length
-        );
+        uint256 numberOfAccountsToLiquidate = MathUtil.min(maxNumberOfAccounts, liquidatableAccounts.length);
 
         for (uint256 i = 0; i < numberOfAccountsToLiquidate; i++) {
             uint128 accountId = liquidatableAccounts[i].to128();
@@ -102,14 +99,14 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
     /**
      * @inheritdoc ILiquidationModule
      */
-    function liquidateFlaggedAccounts(
-        uint128[] calldata accountIds
-    ) external override returns (uint256 liquidationReward) {
+    function liquidateFlaggedAccounts(uint128[] calldata accountIds)
+        external
+        override
+        returns (uint256 liquidationReward)
+    {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
-        SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket
-            .load()
-            .liquidatableAccounts;
+        SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket.load().liquidatableAccounts;
 
         for (uint256 i = 0; i < accountIds.length; i++) {
             uint128 accountId = accountIds[i];
@@ -132,30 +129,19 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
      * @inheritdoc ILiquidationModule
      */
     function canLiquidate(uint128 accountId) external view override returns (bool isEligible) {
-        (isEligible, , , , ) = PerpsAccount.load(accountId).isEligibleForLiquidation(
-            PerpsPrice.Tolerance.DEFAULT
-        );
+        (isEligible,,,,) = PerpsAccount.load(accountId).isEligibleForLiquidation(PerpsPrice.Tolerance.DEFAULT);
     }
 
     /**
      * @inheritdoc ILiquidationModule
      */
-    function liquidationCapacity(
-        uint128 marketId
-    )
+    function liquidationCapacity(uint128 marketId)
         external
         view
         override
-        returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
-            uint256 latestLiquidationTimestamp
-        )
+        returns (uint256 capacity, uint256 maxLiquidationInWindow, uint256 latestLiquidationTimestamp)
     {
-        return
-            PerpsMarket.load(marketId).currentLiquidationCapacity(
-                PerpsMarketConfiguration.load(marketId)
-            );
+        return PerpsMarket.load(marketId).currentLiquidationCapacity(PerpsMarketConfiguration.load(marketId));
     }
 
     struct LiquidateAccountRuntime {
@@ -182,16 +168,9 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         runtime.accountId = account.id;
         uint256[] memory openPositionMarketIds = account.openPositionMarketIds.values();
 
-        for (
-            runtime.loopIterator = 0;
-            runtime.loopIterator < openPositionMarketIds.length;
-            runtime.loopIterator++
-        ) {
+        for (runtime.loopIterator = 0; runtime.loopIterator < openPositionMarketIds.length; runtime.loopIterator++) {
             runtime.positionMarketId = openPositionMarketIds[runtime.loopIterator].to128();
-            runtime.price = PerpsPrice.getCurrentPrice(
-                runtime.positionMarketId,
-                PerpsPrice.Tolerance.STRICT
-            );
+            runtime.price = PerpsPrice.getCurrentPrice(runtime.positionMarketId, PerpsPrice.Tolerance.STRICT);
 
             (
                 uint256 amountLiquidated,
@@ -203,12 +182,11 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
             // endorsed liquidators do not get flag rewards
             if (
-                ERC2771Context._msgSender() !=
-                PerpsMarketConfiguration.load(runtime.positionMarketId).endorsedLiquidator
+                ERC2771Context._msgSender()
+                    != PerpsMarketConfiguration.load(runtime.positionMarketId).endorsedLiquidator
             ) {
                 // using oldPositionAbsSize to calculate flag reward
-                runtime.totalFlaggingRewards += PerpsMarketConfiguration
-                    .load(runtime.positionMarketId)
+                runtime.totalFlaggingRewards += PerpsMarketConfiguration.load(runtime.positionMarketId)
                     .calculateFlagReward(QuantoUint256.wrap(oldPositionAbsSize.mulDecimal(runtime.price.unwrap()))).unwrap();
             }
 
@@ -229,17 +207,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 marketUpdateData.interestRate
             );
 
-            emit PositionLiquidated(
-                runtime.accountId,
-                runtime.positionMarketId,
-                amountLiquidated,
-                newPositionSize
-            );
+            emit PositionLiquidated(runtime.accountId, runtime.positionMarketId, amountLiquidated, newPositionSize);
         }
 
-        runtime.totalLiquidationCost =
-            KeeperCosts.load().getLiquidateKeeperCosts().unwrap() +
-            costOfFlagExecution;
+        runtime.totalLiquidationCost = KeeperCosts.load().getLiquidateKeeperCosts().unwrap() + costOfFlagExecution;
         if (positionFlagged || runtime.totalLiquidated > 0) {
             keeperLiquidationReward = _processLiquidationRewards(
                 USDUint256.wrap(positionFlagged ? runtime.totalFlaggingRewards : 0),
@@ -252,11 +223,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             }
         }
 
-        emit AccountLiquidationAttempt(
-            runtime.accountId,
-            keeperLiquidationReward,
-            runtime.accountFullyLiquidated
-        );
+        emit AccountLiquidationAttempt(runtime.accountId, keeperLiquidationReward, runtime.accountFullyLiquidated);
     }
 
     /**
@@ -272,9 +239,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         }
         // pay out liquidation rewards
         reward = GlobalPerpsMarketConfiguration.load().keeperReward(
-            keeperRewards,
-            costOfExecutionInUsd,
-            availableMarginInUsd
+            keeperRewards, costOfExecutionInUsd, availableMarginInUsd
         );
         if (reward.unwrap() > 0) {
             PerpsMarketFactory.load().withdrawMarketUsd(ERC2771Context._msgSender(), reward);

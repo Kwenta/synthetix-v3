@@ -6,7 +6,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
 import {IPerpsMarketModule} from "../interfaces/IPerpsMarketModule.sol";
-import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256} from "quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Module for getting perps market information.
@@ -18,9 +18,7 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function metadata(
-        uint128 marketId
-    ) external view override returns (string memory name, string memory symbol) {
+    function metadata(uint128 marketId) external view override returns (string memory name, string memory symbol) {
         PerpsMarket.Data storage market = PerpsMarket.load(marketId);
         return (market.name, market.symbol);
     }
@@ -70,35 +68,29 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function fillPrice(
-        uint128 marketId,
-        BaseQuantoPerUSDInt128 orderSize,
-        USDPerBaseUint256 price
-    ) external view override returns (USDPerBaseUint256) {
-        return
-            AsyncOrder.calculateFillPrice(
-                PerpsMarket.load(marketId).skew,
-                PerpsMarketConfiguration.load(marketId).skewScale,
-                orderSize,
-                price
-            );
+    function fillPrice(uint128 marketId, BaseQuantoPerUSDInt128 orderSize, USDPerBaseUint256 price)
+        external
+        view
+        override
+        returns (USDPerBaseUint256)
+    {
+        return AsyncOrder.calculateFillPrice(
+            PerpsMarket.load(marketId).skew, PerpsMarketConfiguration.load(marketId).skewScale, orderSize, price
+        );
     }
 
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function getMarketSummary(
-        uint128 marketId
-    ) external view override returns (MarketSummary memory summary) {
+    function getMarketSummary(uint128 marketId) external view override returns (MarketSummary memory summary) {
         PerpsMarket.Data storage market = PerpsMarket.load(marketId);
-        return
-            MarketSummary({
-                skew: market.skew.unwrap(),
-                size: market.size.unwrap(),
-                maxOpenInterest: this.maxOpenInterest(marketId),
-                currentFundingRate: market.currentFundingRate(),
-                currentFundingVelocity: market.currentFundingVelocity(),
-                indexPrice: this.indexPrice(marketId)
-            });
+        return MarketSummary({
+            skew: market.skew.unwrap(),
+            size: market.size.unwrap(),
+            maxOpenInterest: this.maxOpenInterest(marketId),
+            currentFundingRate: market.currentFundingRate(),
+            currentFundingVelocity: market.currentFundingVelocity(),
+            indexPrice: this.indexPrice(marketId)
+        });
     }
 }

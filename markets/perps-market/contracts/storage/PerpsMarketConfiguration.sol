@@ -6,7 +6,14 @@ import {SafeCastI128} from "@synthetixio/core-contracts/contracts/utils/SafeCast
 import {OrderFee} from "./OrderFee.sol";
 import {SettlementStrategy} from "./SettlementStrategy.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
-import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, QuantoUint256, InteractionsBaseQuantoPerUSDUint256} from 'quanto-dimensions/src/UnitTypes.sol';
+import {
+    BaseQuantoPerUSDUint256,
+    BaseQuantoPerUSDInt128,
+    USDPerBaseUint256,
+    BaseQuantoPerUSDUint128,
+    QuantoUint256,
+    InteractionsBaseQuantoPerUSDUint256
+} from "quanto-dimensions/src/UnitTypes.sol";
 
 library PerpsMarketConfiguration {
     using DecimalMath for int256;
@@ -16,12 +23,7 @@ library PerpsMarketConfiguration {
 
     error MaxOpenInterestReached(uint128 marketId, uint256 maxMarketSize, int256 newSideSize);
 
-    error MaxUSDOpenInterestReached(
-        uint128 marketId,
-        uint256 maxMarketValue,
-        int256 newSideSize,
-        uint256 price
-    );
+    error MaxUSDOpenInterestReached(uint128 marketId, uint256 maxMarketValue, int256 newSideSize, uint256 price);
 
     error InvalidSettlementStrategy(uint256 settlementStrategyId);
 
@@ -88,9 +90,7 @@ library PerpsMarketConfiguration {
     }
 
     function load(uint128 marketId) internal pure returns (Data storage store) {
-        bytes32 s = keccak256(
-            abi.encode("io.synthetix.perps-market.PerpsMarketConfiguration", marketId)
-        );
+        bytes32 s = keccak256(abi.encode("io.synthetix.perps-market.PerpsMarketConfiguration", marketId));
         assembly {
             store.slot := s
         }
@@ -98,31 +98,24 @@ library PerpsMarketConfiguration {
 
     function maxLiquidationAmountInWindow(Data storage self) internal view returns (uint256) {
         OrderFee.Data storage orderFeeData = self.orderFees;
-        return
-            (orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
-                self.maxLiquidationLimitAccumulationMultiplier
-            ) * self.maxSecondsInLiquidationWindow;
+        return (orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
+            self.maxLiquidationLimitAccumulationMultiplier
+        ) * self.maxSecondsInLiquidationWindow;
     }
 
-    function numberOfLiquidationWindows(
-        Data storage self,
-        uint256 positionSize
-    ) internal view returns (uint256) {
+    function numberOfLiquidationWindows(Data storage self, uint256 positionSize) internal view returns (uint256) {
         return MathUtil.ceilDivide(positionSize, maxLiquidationAmountInWindow(self));
     }
 
-    function calculateFlagReward(
-        Data storage self,
-        QuantoUint256 notionalValue
-    ) internal view returns (QuantoUint256) {
+    function calculateFlagReward(Data storage self, QuantoUint256 notionalValue)
+        internal
+        view
+        returns (QuantoUint256)
+    {
         return notionalValue.mulDecimal(self.flagRewardRatioD18);
     }
 
-    function calculateRequiredMargins(
-        Data storage self,
-        BaseQuantoPerUSDInt128 size,
-        USDPerBaseUint256 price
-    )
+    function calculateRequiredMargins(Data storage self, BaseQuantoPerUSDInt128 size, USDPerBaseUint256 price)
         internal
         view
         returns (
@@ -138,26 +131,23 @@ library PerpsMarketConfiguration {
         BaseQuantoPerUSDUint256 sizeAbs = BaseQuantoPerUSDUint256.wrap(MathUtil.abs(size.unwrap().to256()));
         uint256 impactOnSkew = self.skewScale == 0 ? 0 : sizeAbs.unwrap().divDecimal(self.skewScale);
 
-        initialMarginRatio =
-            impactOnSkew.mulDecimal(self.initialMarginRatioD18) +
-            self.minimumInitialMarginRatioD18;
+        initialMarginRatio = impactOnSkew.mulDecimal(self.initialMarginRatioD18) + self.minimumInitialMarginRatioD18;
         maintenanceMarginRatio = initialMarginRatio.mulDecimal(self.maintenanceMarginScalarD18);
 
         QuantoUint256 notional = sizeAbs.mulDecimalToQuanto(price);
 
         initialMargin = notional.mulDecimal(initialMarginRatio) + QuantoUint256.wrap(self.minimumPositionMargin);
-        maintenanceMargin =
-            notional.mulDecimal(maintenanceMarginRatio) +
-            QuantoUint256.wrap(self.minimumPositionMargin);
+        maintenanceMargin = notional.mulDecimal(maintenanceMarginRatio) + QuantoUint256.wrap(self.minimumPositionMargin);
     }
 
     /**
      * @notice given a strategy id, returns the entire settlement strategy struct
      */
-    function loadValidSettlementStrategy(
-        uint128 marketId,
-        uint256 settlementStrategyId
-    ) internal view returns (SettlementStrategy.Data storage strategy) {
+    function loadValidSettlementStrategy(uint128 marketId, uint256 settlementStrategyId)
+        internal
+        view
+        returns (SettlementStrategy.Data storage strategy)
+    {
         Data storage self = load(marketId);
         validateStrategyExists(self, settlementStrategyId);
 
@@ -167,10 +157,7 @@ library PerpsMarketConfiguration {
         }
     }
 
-    function validateStrategyExists(
-        Data storage config,
-        uint256 settlementStrategyId
-    ) internal view {
+    function validateStrategyExists(Data storage config, uint256 settlementStrategyId) internal view {
         if (settlementStrategyId >= config.settlementStrategies.length) {
             revert InvalidSettlementStrategy(settlementStrategyId);
         }
