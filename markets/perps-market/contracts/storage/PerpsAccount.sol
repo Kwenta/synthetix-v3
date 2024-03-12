@@ -18,7 +18,7 @@ import {GlobalPerpsMarketConfiguration} from "./GlobalPerpsMarketConfiguration.s
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
-import {BaseQuantoPerUSDInt128, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 uint128 constant SNX_USD_MARKET_ID = 0;
 
@@ -44,6 +44,9 @@ library PerpsAccount {
     using InteractionsQuantoUint256 for QuantoUint256;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
     using InteractionsQuantoInt256 for QuantoInt256;
+    using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
+    using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
+    using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
 
     struct Data {
         // @dev synth marketId => amount
@@ -380,13 +383,13 @@ library PerpsAccount {
             );
 
             uint256 numberOfWindows = marketConfig.numberOfLiquidationWindows(
-                MathUtil.abs(position.size.unwrap())
+                position.size.abs()
             );
 
             QuantoUint256 flagReward = marketConfig.calculateFlagReward(
-                QuantoUint256.wrap(MathUtil.abs(position.size.unwrap()).mulDecimal(
-                    PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT).unwrap()
-                ))
+                position.size.abs().mulDecimalToQuanto(
+                    PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT)
+                )
             );
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT);
             accumulatedLiquidationRewards = accumulatedLiquidationRewards + flagReward.mulDecimalToUSD(quantoPrice);
@@ -545,10 +548,10 @@ library PerpsAccount {
     )
         internal
         returns (
-            uint128 amountToLiquidate,
-            int128 newPositionSize,
-            int128 sizeDelta,
-            uint128 oldPositionAbsSize,
+            BaseQuantoPerUSDUint128 amountToLiquidate,
+            BaseQuantoPerUSDInt128 newPositionSize,
+            BaseQuantoPerUSDInt128 sizeDelta,
+            BaseQuantoPerUSDUint128 oldPositionAbsSize,
             MarketUpdate.Data memory marketUpdateData
         )
     {
@@ -557,34 +560,34 @@ library PerpsAccount {
 
         perpsMarket.recomputeFunding(price);
 
-        int128 oldPositionSize = position.size.unwrap();
-        oldPositionAbsSize = MathUtil.abs128(oldPositionSize);
-        amountToLiquidate = perpsMarket.maxLiquidatableAmount(oldPositionAbsSize);
+        BaseQuantoPerUSDInt128 oldPositionSize = position.size;
+        oldPositionAbsSize = oldPositionSize.abs128();
+        amountToLiquidate = BaseQuantoPerUSDUint128.wrap(perpsMarket.maxLiquidatableAmount(oldPositionAbsSize.unwrap()));
 
-        if (amountToLiquidate == 0) {
-            return (0, oldPositionSize, 0, oldPositionAbsSize, marketUpdateData);
+        if (amountToLiquidate.unwrap() == 0) {
+            return (BaseQuantoPerUSDUint128.wrap(0), oldPositionSize, BaseQuantoPerUSDInt128.wrap(0), oldPositionAbsSize, marketUpdateData);
         }
 
-        int128 amtToLiquidationInt = amountToLiquidate.toInt();
+        BaseQuantoPerUSDInt128 amtToLiquidationInt = amountToLiquidate.toInt();
         // reduce position size
-        newPositionSize = oldPositionSize > 0
+        newPositionSize = oldPositionSize.unwrap() > 0
             ? oldPositionSize - amtToLiquidationInt
             : oldPositionSize + amtToLiquidationInt;
 
         // create new position in case of partial liquidation
         Position.Data memory newPosition;
-        if (newPositionSize != 0) {
+        if (newPositionSize.unwrap() != 0) {
             newPosition = Position.Data({
                 marketId: marketId,
                 latestInteractionPrice: USDPerBaseUint128.wrap(price.unwrap().to128()),
                 latestInteractionFunding: perpsMarket.lastFundingValue.to128(),
                 latestInterestAccrued: 0,
-                size: BaseQuantoPerUSDInt128.wrap(newPositionSize)
+                size: newPositionSize
             });
         }
 
         // update position markets
-        updateOpenPositions(self, marketId, newPositionSize);
+        updateOpenPositions(self, marketId, newPositionSize.unwrap());
 
         // update market data
         // TODO: ensure stuff going in here is correct
