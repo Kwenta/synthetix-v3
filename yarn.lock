@@ -1417,10 +1417,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@kwenta/quanto-dimensions@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "@kwenta/quanto-dimensions@npm:1.1.0"
-  checksum: 10/268a5c357dc816cfc96df58f22393a34c173a9388b9db399901c3eea1d5111726df175b463d38587a063edd46364c12cbdb3305028c5a80a921658c1d38cb33f
+"@kwenta/quanto-dimensions@npm:^1.1.1":
+  version: 1.1.1
+  resolution: "@kwenta/quanto-dimensions@npm:1.1.1"
+  checksum: 10/b5b0252b8a22ab4b4a32e503884370126ef1882f0c71c0f2e2eca419d56bfef273e53860e4aeafe1b2ab3e9283a1eb3888ead69d198f37fc42fb6e3614bbe694
   languageName: node
   linkType: hard
 
@@ -3184,7 +3184,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@synthetixio/perps-market@workspace:markets/perps-market"
   dependencies:
-    "@kwenta/quanto-dimensions": "npm:^1.1.0"
+    "@kwenta/quanto-dimensions": "npm:^1.1.1"
     "@synthetixio/common-config": "workspace:*"
     "@synthetixio/core-contracts": "workspace:*"
     "@synthetixio/core-modules": "workspace:*"
