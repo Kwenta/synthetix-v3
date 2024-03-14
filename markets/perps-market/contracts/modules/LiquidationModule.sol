@@ -19,7 +19,7 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
 import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
-import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsBaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for liquidating accounts.
@@ -270,7 +270,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         USDUint256 availableMarginInUsd
     ) private returns (USDUint256 reward) {
         if ((keeperRewards + costOfExecutionInUsd).unwrap() == 0) {
-            return USDUint256.wrap(0);
+            return InteractionsUSDUint256.zero();
         }
         // pay out liquidation rewards
         reward = GlobalPerpsMarketConfiguration.load().keeperReward(
@@ -278,7 +278,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             costOfExecutionInUsd,
             availableMarginInUsd
         );
-        if (reward.unwrap() > 0) {
+        if (reward > InteractionsUSDUint256.zero()) {
             PerpsMarketFactory.load().withdrawMarketUsd(ERC2771Context._msgSender(), reward);
         }
     }

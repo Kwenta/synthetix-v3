@@ -107,11 +107,7 @@ library GlobalPerpsMarketConfiguration {
         Data storage self,
         USDUint256 costOfExecutionInUsd
     ) internal view returns (USDUint256) {
-        return
-            USDUint256.wrap(MathUtil.max(
-                costOfExecutionInUsd.unwrap() + self.minKeeperRewardUsd.unwrap(),
-                costOfExecutionInUsd.mulDecimal(self.minKeeperProfitRatioD18 + DecimalMath.UNIT).unwrap()
-            ));
+        return (costOfExecutionInUsd + self.minKeeperRewardUsd).max(costOfExecutionInUsd.mulDecimal(self.minKeeperProfitRatioD18 + DecimalMath.UNIT));
     }
 
     function maximumKeeperRewardCap(
@@ -123,11 +119,7 @@ library GlobalPerpsMarketConfiguration {
             return self.maxKeeperRewardUsd;
         }
 
-        return
-            USDUint256.wrap(MathUtil.min(
-                availableMarginInUsd.mulDecimal(self.maxKeeperScalingRatioD18).unwrap(),
-                self.maxKeeperRewardUsd.unwrap()
-            ));
+        return availableMarginInUsd.mulDecimal(self.maxKeeperScalingRatioD18).min(self.maxKeeperRewardUsd);
     }
 
     /**
@@ -141,7 +133,7 @@ library GlobalPerpsMarketConfiguration {
     ) internal view returns (USDUint256) {
         USDUint256 minCap = minimumKeeperRewardCap(self, costOfExecutionInUsd);
         USDUint256 maxCap = maximumKeeperRewardCap(self, availableMarginInUsd);
-        return USDUint256.wrap(MathUtil.min(MathUtil.max(minCap.unwrap(), (keeperRewards + costOfExecutionInUsd).unwrap()), maxCap.unwrap()));
+        return minCap.max(keeperRewards + costOfExecutionInUsd).min(maxCap);
     }
 
     function updateSynthDeductionPriority(

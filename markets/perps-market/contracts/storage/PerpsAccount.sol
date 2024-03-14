@@ -18,7 +18,7 @@ import {GlobalPerpsMarketConfiguration} from "./GlobalPerpsMarketConfiguration.s
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDUint256, InteractionsUSDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 uint128 constant SNX_USD_MARKET_ID = 0;
 
@@ -41,12 +41,14 @@ library PerpsAccount {
     using DecimalMath for uint256;
     using KeeperCosts for KeeperCosts.Data;
     using AsyncOrder for AsyncOrder.Data;
+    using InteractionsUSDUint256 for USDUint256;
     using InteractionsQuantoUint256 for QuantoUint256;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
     using InteractionsQuantoInt256 for QuantoInt256;
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
     using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
 
     struct Data {
         // @dev synth marketId => amount
@@ -293,7 +295,7 @@ library PerpsAccount {
         USDUint256 totalCollateralValue = getTotalCollateralValue(self, stalenessTolerance);
         USDInt256 accountPnl = getAccountPnl(self, stalenessTolerance);
 
-        return USDInt256.wrap(totalCollateralValue.unwrap().toInt()) + accountPnl;
+        return totalCollateralValue.toInt() + accountPnl;
     }
 
     function getTotalNotionalOpenInterest(
@@ -334,7 +336,7 @@ library PerpsAccount {
     {
         uint256 openPositionMarketIdsLength = self.openPositionMarketIds.length();
         if (openPositionMarketIdsLength == 0) {
-            return (USDUint256.wrap(0), USDUint256.wrap(0), USDUint256.wrap(0));
+            return (InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero());
         }
 
         // use separate accounting for liquidation rewards so we can compare against global min/max liquidation reward values
@@ -414,8 +416,8 @@ library PerpsAccount {
             getTotalCollateralValue(self, PerpsPrice.Tolerance.DEFAULT)
         );
         USDUint256 liquidateWindowsCosts = numOfWindows == 0
-            ? USDUint256.wrap(0)
-            : globalConfig.keeperReward(USDUint256.wrap(0), costOfLiquidation, USDUint256.wrap(0)).mul(numOfWindows - 1);
+            ? InteractionsUSDUint256.zero()
+            : globalConfig.keeperReward(InteractionsUSDUint256.zero(), costOfLiquidation, InteractionsUSDUint256.zero()).mul(numOfWindows - 1);
 
         possibleLiquidationReward = liquidateAndFlagCost + liquidateWindowsCosts;
     }
@@ -565,7 +567,7 @@ library PerpsAccount {
         amountToLiquidate = BaseQuantoPerUSDUint128.wrap(perpsMarket.maxLiquidatableAmount(oldPositionAbsSize.unwrap()));
 
         if (amountToLiquidate.unwrap() == 0) {
-            return (BaseQuantoPerUSDUint128.wrap(0), oldPositionSize, BaseQuantoPerUSDInt128.wrap(0), oldPositionAbsSize, marketUpdateData);
+            return (InteractionsBaseQuantoPerUSDUint128.zero(), oldPositionSize, InteractionsBaseQuantoPerUSDInt128.zero(), oldPositionAbsSize, marketUpdateData);
         }
 
         BaseQuantoPerUSDInt128 amtToLiquidationInt = amountToLiquidate.toInt();
@@ -579,7 +581,7 @@ library PerpsAccount {
         if (newPositionSize.unwrap() != 0) {
             newPosition = Position.Data({
                 marketId: marketId,
-                latestInteractionPrice: USDPerBaseUint128.wrap(price.unwrap().to128()),
+                latestInteractionPrice: price.to128(),
                 latestInteractionFunding: perpsMarket.lastFundingValue.to128(),
                 latestInterestAccrued: 0,
                 size: newPositionSize
