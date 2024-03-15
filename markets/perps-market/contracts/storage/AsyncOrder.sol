@@ -12,7 +12,7 @@ import {PerpsAccount} from "./PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {OrderFee} from "./OrderFee.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerQuantoUint256, USDPerQuantoInt256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerQuantoUint256, USDPerQuantoInt256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Async order top level data storage
@@ -36,6 +36,7 @@ library AsyncOrder {
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
     using InteractionsUSDUint256 for USDUint256;
+    using InteractionsUSDInt256 for USDInt256;
 
     /**
      * @notice Thrown when settlement window is not open yet.
@@ -195,7 +196,7 @@ library AsyncOrder {
      * @dev The rest of the fields will be updated on the next commitment. Not doing it here is more gas efficient.
      */
     function reset(Data storage self) internal {
-        self.request.sizeDelta = BaseQuantoPerUSDInt128.wrap(0);
+        self.request.sizeDelta = InteractionsBaseQuantoPerUSDInt128.zero();
     }
 
     /**
@@ -337,10 +338,7 @@ library AsyncOrder {
         ).mulDecimalToUSD(runtime.quantoPrice.toInt());
 
         // only account for negative pnl
-        runtime.currentAvailableMargin = runtime.currentAvailableMargin + USDInt256.wrap(MathUtil.min(
-            runtime.startingPnl.unwrap(),
-            0
-        ));
+        runtime.currentAvailableMargin = runtime.currentAvailableMargin + runtime.startingPnl.min(InteractionsUSDInt256.zero());
 
         if (runtime.currentAvailableMargin < runtime.orderFees.toInt()) {
             revert InsufficientMargin(runtime.currentAvailableMargin, runtime.orderFees);
@@ -563,7 +561,7 @@ library AsyncOrder {
         RequiredMarginWithNewPositionRuntime memory runtime;
 
         if (MathUtil.isSameSideReducing(oldPositionSize.unwrap(), newPositionSize.unwrap())) {
-            return USDUint256.wrap(0);
+            return InteractionsUSDUint256.zero();
         }
 
         // get initial margin requirement for the new position

@@ -7,7 +7,7 @@ import {PerpsMarket} from "./PerpsMarket.sol";
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {InterestRate} from "./InterestRate.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
-import {BaseQuantoPerUSDInt128, USDPerBaseUint256, USDPerBaseUint128, USDPerBaseInt256, QuantoUint256, QuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseUint128, BaseQuantoPerUSDInt256, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerBaseInt256, QuantoUint256, QuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseUint128, BaseQuantoPerUSDInt256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 library Position {
     using SafeCastU256 for uint256;
@@ -16,6 +16,7 @@ library Position {
     using DecimalMath for int128;
     using PerpsMarket for PerpsMarket.Data;
     using InterestRate for InterestRate.Data;
+    using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
     using InteractionsBaseQuantoPerUSDInt256 for BaseQuantoPerUSDInt256;
     using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
@@ -118,6 +119,6 @@ library Position {
     }
 
     function getNotionalValue(Data storage self, USDPerBaseUint256 price) internal view returns (QuantoUint256) {
-        return QuantoUint256.wrap(MathUtil.abs(self.size.unwrap()).mulDecimal(price.unwrap()));
+        return self.size.abs().mulDecimalToQuanto(price);
     }
 }

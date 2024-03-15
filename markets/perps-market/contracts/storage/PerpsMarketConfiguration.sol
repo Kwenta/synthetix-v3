@@ -6,13 +6,14 @@ import {SafeCastI128} from "@synthetixio/core-contracts/contracts/utils/SafeCast
 import {OrderFee} from "./OrderFee.sol";
 import {SettlementStrategy} from "./SettlementStrategy.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
-import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, QuantoUint256, InteractionsBaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, QuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 library PerpsMarketConfiguration {
     using DecimalMath for int256;
     using DecimalMath for uint256;
     using SafeCastI128 for int128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
 
     error MaxOpenInterestReached(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize, int256 newSideSize);
 
@@ -133,9 +134,9 @@ library PerpsMarketConfiguration {
         )
     {
         if (size.unwrap() == 0) {
-            return (0, 0, QuantoUint256.wrap(0), QuantoUint256.wrap(0));
+            return (0, 0, InteractionsQuantoUint256.zero(), InteractionsQuantoUint256.zero());
         }
-        BaseQuantoPerUSDUint256 sizeAbs = BaseQuantoPerUSDUint256.wrap(MathUtil.abs(size.unwrap().to256()));
+        BaseQuantoPerUSDUint256 sizeAbs = size.abs();
         uint256 impactOnSkew = self.skewScale == 0 ? 0 : sizeAbs.unwrap().divDecimal(self.skewScale);
 
         initialMarginRatio =

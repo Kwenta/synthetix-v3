@@ -20,7 +20,7 @@ import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {QuantoUint256, USDInt256, USDUint256, QuantoInt256, BaseQuantoPerUSDInt128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {QuantoUint256, USDInt256, USDUint256, QuantoInt256, BaseQuantoPerUSDInt128, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module to manage accounts
@@ -34,6 +34,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
     using SafeCastI256 for int256;
     using GlobalPerpsMarket for GlobalPerpsMarket.Data;
     using PerpsMarketFactory for PerpsMarketFactory.Data;
+    using InteractionsUSDUint256 for USDUint256;
 
     /**
      * @inheritdoc IPerpsAccountModule
@@ -157,7 +158,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
 
         USDUint256 requiredMargin = initialRequiredMargin + liquidationReward;
 
-        withdrawableMargin = availableMargin - USDInt256.wrap(requiredMargin.unwrap().toInt());
+        withdrawableMargin = availableMargin - requiredMargin.toInt();
     }
 
     /**
@@ -177,7 +178,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
     {
         PerpsAccount.Data storage account = PerpsAccount.load(accountId);
         if (account.openPositionMarketIds.length() == 0) {
-            return (USDUint256.wrap(0), USDUint256.wrap(0), USDUint256.wrap(0));
+            return (InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero());
         }
 
         (requiredInitialMargin, requiredMaintenanceMargin, maxLiquidationReward) = account
