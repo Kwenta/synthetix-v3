@@ -21,9 +21,9 @@ interface IAsyncOrderCancelModule {
     event OrderCancelled(
         uint128 indexed marketId,
         uint128 indexed accountId,
-        uint256 desiredPrice,
-        uint256 fillPrice,
-        int128 sizeDelta,
+        USDPerBaseUint256 desiredPrice,
+        USDPerBaseUint256 fillPrice,
+        BaseQuantoPerUSDInt128 sizeDelta,
         USDUint256 settlementReward,
         bytes32 indexed trackingCode,
         address settler

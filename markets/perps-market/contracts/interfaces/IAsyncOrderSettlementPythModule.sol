@@ -3,7 +3,7 @@ pragma solidity >=0.8.11 <0.9.0;
 
 import {Position} from "../storage/Position.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
-import {USDPerBaseUint256, USDUint256, QuantoUint256, QuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, USDPerBaseUint256, USDUint256, QuantoUint256, QuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 interface IAsyncOrderSettlementPythModule {
     /**
@@ -28,11 +28,11 @@ interface IAsyncOrderSettlementPythModule {
         uint256 fillPrice,
         int256 pnl,
         int256 accruedFunding,
-        int128 sizeDelta,
+        BaseQuantoPerUSDInt128 sizeDelta,
         int128 newSize,
         uint256 totalFees,
-        uint256 referralFees,
-        uint256 collectedFees,
+        USDUint256 referralFees,
+        USDUint256 collectedFees,
         USDUint256 settlementReward,
         bytes32 indexed trackingCode,
         address settler
@@ -49,7 +49,7 @@ interface IAsyncOrderSettlementPythModule {
     struct SettleOrderRuntime {
         uint128 marketId;
         uint128 accountId;
-        int128 sizeDelta;
+        BaseQuantoPerUSDInt128 sizeDelta;
         QuantoInt256 pnl;
         QuantoUint256 chargedInterest;
         QuantoInt256 accruedFunding;
@@ -58,8 +58,8 @@ interface IAsyncOrderSettlementPythModule {
         USDUint256 settlementReward;
         USDPerBaseUint256 fillPrice;
         USDUint256 totalFees;
-        uint256 referralFees;
-        uint256 feeCollectorFees;
+        USDUint256 referralFees;
+        USDUint256 feeCollectorFees;
         Position.Data newPosition;
         MarketUpdate.Data updateData;
         uint256 synthDeductionIterator;

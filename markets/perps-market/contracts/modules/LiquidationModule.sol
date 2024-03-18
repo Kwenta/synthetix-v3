@@ -222,10 +222,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
             emit MarketUpdated(
                 runtime.positionMarketId,
-                runtime.price.unwrap(),
+                runtime.price,
                 marketUpdateData.skew,
                 marketUpdateData.size,
-                sizeDelta.unwrap(),
+                sizeDelta,
                 marketUpdateData.currentFundingRate,
                 marketUpdateData.currentFundingVelocity,
                 marketUpdateData.interestRate

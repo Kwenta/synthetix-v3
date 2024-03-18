@@ -84,7 +84,7 @@ contract AsyncOrderSettlementPythModule is
             .validateRequest(settlementStrategy, price);
 
         runtime.amountToDeduct = runtime.totalFees;
-        runtime.sizeDelta = asyncOrder.request.sizeDelta.unwrap();
+        runtime.sizeDelta = asyncOrder.request.sizeDelta;
 
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
         PerpsAccount.Data storage perpsAccount = PerpsAccount.load(runtime.accountId);
@@ -95,12 +95,12 @@ contract AsyncOrderSettlementPythModule is
         );
         runtime.pnlUint = runtime.pnl.abs();
 
-        if (runtime.pnl.unwrap() > 0) {
+        if (runtime.pnl > InteractionsQuantoInt256.zero()) {
             PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
                 runtime.marketId
             );
             perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
-        } else if (runtime.pnl.unwrap() < 0) {
+        } else if (runtime.pnl < InteractionsQuantoInt256.zero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
@@ -110,11 +110,11 @@ contract AsyncOrderSettlementPythModule is
             runtime.accountId,
             runtime.newPosition
         );
-        perpsAccount.updateOpenPositions(runtime.marketId, runtime.newPosition.size.unwrap());
+        perpsAccount.updateOpenPositions(runtime.marketId, runtime.newPosition.size);
 
         emit MarketUpdated(
             runtime.updateData.marketId,
-            price.unwrap(),
+            price,
             runtime.updateData.skew,
             runtime.updateData.size,
             runtime.sizeDelta,
@@ -155,7 +155,7 @@ contract AsyncOrderSettlementPythModule is
         (runtime.referralFees, runtime.feeCollectorFees) = GlobalPerpsMarketConfiguration
             .load()
             .collectFees(
-                (runtime.totalFees - runtime.settlementReward).unwrap(), // totalFees includes settlement reward so we remove it
+                (runtime.totalFees - runtime.settlementReward), // totalFees includes settlement reward so we remove it
                 asyncOrder.request.referrer,
                 factory
             );

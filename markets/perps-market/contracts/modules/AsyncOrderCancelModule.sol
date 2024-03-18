@@ -14,7 +14,7 @@ import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {USDUint256, USDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDUint256, USDPerBaseUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for cancelling async orders.
@@ -69,7 +69,7 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
 
         runtime.fillPrice = asyncOrder.validateCancellation(settlementStrategy, price);
 
-        if (runtime.settlementReward.unwrap() > 0) {
+        if (runtime.settlementReward > InteractionsUSDUint256.zero()) {
             // deduct keeper reward
             (uint128[] memory deductedSynthIds, uint256[] memory deductedAmount) = PerpsAccount
                 .load(runtime.accountId)
@@ -97,9 +97,9 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
         emit OrderCancelled(
             runtime.marketId,
             runtime.accountId,
-            runtime.acceptablePrice.unwrap(),
-            runtime.fillPrice.unwrap(),
-            runtime.sizeDelta.unwrap(),
+            runtime.acceptablePrice,
+            runtime.fillPrice,
+            runtime.sizeDelta,
             runtime.settlementReward,
             asyncOrder.request.trackingCode,
             ERC2771Context._msgSender()

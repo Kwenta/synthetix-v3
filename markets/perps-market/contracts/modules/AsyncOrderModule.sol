@@ -53,13 +53,13 @@ contract AsyncOrderModule is IAsyncOrderModule {
         AsyncOrder.Data storage order = AsyncOrder.load(commitment.accountId);
 
         // if order (previous) sizeDelta is not zero and didn't revert while checking, it means the previous order expired
-        if (order.request.sizeDelta.unwrap() != 0) {
+        if (!order.request.sizeDelta.isZero()) {
             // @notice not including the expiration time since it requires the previous settlement strategy to be loaded and enabled, otherwise loading it will revert and will prevent new orders to be committed
             emit PreviousOrderExpired(
                 order.request.marketId,
                 order.request.accountId,
-                order.request.sizeDelta.unwrap(),
-                order.request.acceptablePrice.unwrap(),
+                order.request.sizeDelta,
+                order.request.acceptablePrice,
                 order.commitmentTime,
                 order.request.trackingCode
             );
@@ -76,8 +76,8 @@ contract AsyncOrderModule is IAsyncOrderModule {
             commitment.marketId,
             commitment.accountId,
             strategy.strategyType,
-            commitment.sizeDelta.unwrap(),
-            commitment.acceptablePrice.unwrap(),
+            commitment.sizeDelta,
+            commitment.acceptablePrice,
             order.commitmentTime,
             order.commitmentTime + strategy.commitmentPriceDelay,
             order.commitmentTime + strategy.settlementDelay,
