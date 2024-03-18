@@ -95,12 +95,12 @@ contract AsyncOrderSettlementPythModule is
         );
         runtime.pnlUint = runtime.pnl.abs();
 
-        if (runtime.pnl.unwrap() > 0) {
+        if (runtime.pnl > InteractionsQuantoInt256.zero()) {
             PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
                 runtime.marketId
             );
             perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
-        } else if (runtime.pnl.unwrap() < 0) {
+        } else if (runtime.pnl < InteractionsQuantoInt256.zero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
