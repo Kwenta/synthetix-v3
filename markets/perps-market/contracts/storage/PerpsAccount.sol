@@ -164,9 +164,9 @@ library PerpsAccount {
     function updateOpenPositions(
         Data storage self,
         uint256 positionMarketId,
-        int256 size
+        BaseQuantoPerUSDInt128 size
     ) internal {
-        if (size == 0 && self.openPositionMarketIds.contains(positionMarketId)) {
+        if (size.isZero() && self.openPositionMarketIds.contains(positionMarketId)) {
             self.openPositionMarketIds.remove(positionMarketId);
         } else if (!self.openPositionMarketIds.contains(positionMarketId)) {
             self.openPositionMarketIds.add(positionMarketId);
@@ -589,7 +589,7 @@ library PerpsAccount {
         }
 
         // update position markets
-        updateOpenPositions(self, marketId, newPositionSize.unwrap());
+        updateOpenPositions(self, marketId, newPositionSize);
 
         // update market data
         // TODO: ensure stuff going in here is correct
