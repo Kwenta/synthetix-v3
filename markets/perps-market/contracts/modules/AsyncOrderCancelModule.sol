@@ -97,9 +97,9 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
         emit OrderCancelled(
             runtime.marketId,
             runtime.accountId,
-            runtime.acceptablePrice.unwrap(),
-            runtime.fillPrice.unwrap(),
-            runtime.sizeDelta.unwrap(),
+            runtime.acceptablePrice,
+            runtime.fillPrice,
+            runtime.sizeDelta,
             runtime.settlementReward,
             asyncOrder.request.trackingCode,
             ERC2771Context._msgSender()
