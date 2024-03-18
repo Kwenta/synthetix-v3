@@ -48,8 +48,8 @@ interface IAsyncOrderModule {
     event PreviousOrderExpired(
         uint128 indexed marketId,
         uint128 indexed accountId,
-        int128 sizeDelta,
-        uint256 acceptablePrice,
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 acceptablePrice,
         uint256 commitmentTime,
         bytes32 indexed trackingCode
     );

@@ -58,8 +58,8 @@ contract AsyncOrderModule is IAsyncOrderModule {
             emit PreviousOrderExpired(
                 order.request.marketId,
                 order.request.accountId,
-                order.request.sizeDelta.unwrap(),
-                order.request.acceptablePrice.unwrap(),
+                order.request.sizeDelta,
+                order.request.acceptablePrice,
                 order.commitmentTime,
                 order.request.trackingCode
             );
