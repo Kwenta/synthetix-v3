@@ -2,6 +2,7 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import "@synthetixio/core-contracts/contracts/interfaces/IERC165.sol";
+import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 interface IFeeCollector is IERC165 {
     /**
@@ -14,7 +15,7 @@ interface IFeeCollector is IERC165 {
      */
     function quoteFees(
         uint128 marketId,
-        uint256 feeAmount,
+        USDUint256 feeAmount,
         address transactor
-    ) external returns (uint256 feeAmountToCollect);
+    ) external returns (USDUint256 feeAmountToCollect);
 }

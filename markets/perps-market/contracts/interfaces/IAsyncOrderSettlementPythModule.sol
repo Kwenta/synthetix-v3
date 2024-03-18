@@ -31,8 +31,8 @@ interface IAsyncOrderSettlementPythModule {
         BaseQuantoPerUSDInt128 sizeDelta,
         int128 newSize,
         uint256 totalFees,
-        uint256 referralFees,
-        uint256 collectedFees,
+        USDUint256 referralFees,
+        USDUint256 collectedFees,
         USDUint256 settlementReward,
         bytes32 indexed trackingCode,
         address settler
@@ -58,8 +58,8 @@ interface IAsyncOrderSettlementPythModule {
         USDUint256 settlementReward;
         USDPerBaseUint256 fillPrice;
         USDUint256 totalFees;
-        uint256 referralFees;
-        uint256 feeCollectorFees;
+        USDUint256 referralFees;
+        USDUint256 feeCollectorFees;
         Position.Data newPosition;
         MarketUpdate.Data updateData;
         uint256 synthDeductionIterator;

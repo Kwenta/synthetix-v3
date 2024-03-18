@@ -8,7 +8,7 @@ import {DecimalMath} from "@synthetixio/core-contracts/contracts/utils/DecimalMa
 import {MathUtil} from "../utils/MathUtil.sol";
 import {IFeeCollector} from "../interfaces/external/IFeeCollector.sol";
 import {PerpsMarketFactory} from "./PerpsMarketFactory.sol";
-import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title This library contains all global perps market configuration data
@@ -149,32 +149,32 @@ library GlobalPerpsMarketConfiguration {
 
     function collectFees(
         Data storage self,
-        uint256 orderFees,
+        USDUint256 orderFees,
         address referrer,
         PerpsMarketFactory.Data storage factory
-    ) internal returns (uint256 referralFees, uint256 feeCollectorFees) {
+    ) internal returns (USDUint256 referralFees, USDUint256 feeCollectorFees) {
         referralFees = _collectReferrerFees(self, orderFees, referrer, factory);
-        uint256 remainingFees = orderFees - referralFees;
+        USDUint256 remainingFees = orderFees - referralFees;
 
-        if (remainingFees == 0 || self.feeCollector == IFeeCollector(address(0))) {
-            return (referralFees, 0);
+        if (remainingFees.isZero() || self.feeCollector == IFeeCollector(address(0))) {
+            return (referralFees, InteractionsUSDUint256.zero());
         }
 
-        uint256 feeCollectorQuote = self.feeCollector.quoteFees(
+        USDUint256 feeCollectorQuote = self.feeCollector.quoteFees(
             factory.perpsMarketId,
             remainingFees,
             ERC2771Context._msgSender()
         );
 
-        if (feeCollectorQuote == 0) {
-            return (referralFees, 0);
+        if (feeCollectorQuote.isZero()) {
+            return (referralFees, InteractionsUSDUint256.zero());
         }
 
         if (feeCollectorQuote > remainingFees) {
             feeCollectorQuote = remainingFees;
         }
 
-        factory.withdrawMarketUsd(address(self.feeCollector), USDUint256.wrap(feeCollectorQuote));
+        factory.withdrawMarketUsd(address(self.feeCollector), feeCollectorQuote);
 
         return (referralFees, feeCollectorQuote);
     }
@@ -196,18 +196,18 @@ library GlobalPerpsMarketConfiguration {
 
     function _collectReferrerFees(
         Data storage self,
-        uint256 fees,
+        USDUint256 fees,
         address referrer,
         PerpsMarketFactory.Data storage factory
-    ) private returns (uint256 referralFeesSent) {
+    ) private returns (USDUint256 referralFeesSent) {
         if (referrer == address(0)) {
-            return 0;
+            return InteractionsUSDUint256.zero();
         }
 
         uint256 referrerShareRatio = self.referrerShare[referrer];
         if (referrerShareRatio > 0) {
             referralFeesSent = fees.mulDecimal(referrerShareRatio);
-            factory.withdrawMarketUsd(referrer, USDUint256.wrap(referralFeesSent));
+            factory.withdrawMarketUsd(referrer, referralFeesSent);
         }
     }
 }

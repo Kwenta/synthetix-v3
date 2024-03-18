@@ -155,7 +155,7 @@ contract AsyncOrderSettlementPythModule is
         (runtime.referralFees, runtime.feeCollectorFees) = GlobalPerpsMarketConfiguration
             .load()
             .collectFees(
-                (runtime.totalFees - runtime.settlementReward).unwrap(), // totalFees includes settlement reward so we remove it
+                (runtime.totalFees - runtime.settlementReward), // totalFees includes settlement reward so we remove it
                 asyncOrder.request.referrer,
                 factory
             );
