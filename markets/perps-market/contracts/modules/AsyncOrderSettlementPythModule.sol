@@ -114,7 +114,7 @@ contract AsyncOrderSettlementPythModule is
 
         emit MarketUpdated(
             runtime.updateData.marketId,
-            price.unwrap(),
+            price,
             runtime.updateData.skew,
             runtime.updateData.size,
             runtime.sizeDelta,

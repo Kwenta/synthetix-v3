@@ -2,7 +2,7 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
-import {BaseQuantoPerUSDInt128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, USDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Market events used on several places in the system.
@@ -26,7 +26,7 @@ interface IMarketEvents {
      */
     event MarketUpdated(
         uint128 marketId,
-        uint256 price,
+        USDPerBaseUint256 price,
         int256 skew,
         uint256 size,
         BaseQuantoPerUSDInt128 sizeDelta,
