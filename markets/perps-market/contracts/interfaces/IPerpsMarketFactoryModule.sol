@@ -4,6 +4,7 @@ pragma solidity >=0.8.11 <0.9.0;
 import {IMarket} from "@synthetixio/main/contracts/interfaces/external/IMarket.sol";
 import {ISynthetixSystem} from "./external/ISynthetixSystem.sol";
 import {ISpotMarketSystem} from "./external/ISpotMarketSystem.sol";
+import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Perps Market Factory module
@@ -70,5 +71,5 @@ interface IPerpsMarketFactoryModule is IMarket {
     function utilizationRate()
         external
         view
-        returns (uint256 rate, uint256 delegatedCollateral, uint256 lockedCredit);
+        returns (uint256 rate, USDUint256 delegatedCollateral, USDUint256 lockedCredit);
 }

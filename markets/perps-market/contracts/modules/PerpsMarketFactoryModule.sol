@@ -20,6 +20,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {IMarket} from "@synthetixio/main/contracts/interfaces/external/IMarket.sol";
 import {SetUtil} from "@synthetixio/core-contracts/contracts/utils/SetUtil.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
+import {USDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for registering perpetual futures markets. The factory tracks all markets in the system and consolidates implementation.
@@ -117,7 +118,7 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
             // debt is the total debt of all markets
             // can be computed as total collateral value - sum_each_market( debt )
             GlobalPerpsMarket.Data storage globalMarket = GlobalPerpsMarket.load();
-            uint256 collateralValue = globalMarket.totalCollateralValue();
+            USDUint256 collateralValue = globalMarket.totalCollateralValue();
             int256 totalMarketDebt;
 
             SetUtil.UintSet storage activeMarkets = globalMarket.activeMarkets;
@@ -129,7 +130,7 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
                 );
             }
 
-            int256 totalDebt = collateralValue.toInt() + totalMarketDebt;
+            int256 totalDebt = collateralValue.unwrap().toInt() + totalMarketDebt;
             return MathUtil.max(0, totalDebt).toUint();
         }
 
@@ -141,10 +142,10 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
      */
     function minimumCredit(uint128 perpsMarketId) external view override returns (uint256) {
         if (PerpsMarketFactory.load().perpsMarketId == perpsMarketId) {
-            return GlobalPerpsMarket.load().minimumCredit();
+            return GlobalPerpsMarket.load().minimumCredit().unwrap();
         }
 
-        return 0;
+        return InteractionsUSDUint256.zero().unwrap();
     }
 
     /**
@@ -161,7 +162,7 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
         external
         view
         override
-        returns (uint256 rate, uint256 delegatedCollateral, uint256 lockedCredit)
+        returns (uint256 rate, USDUint256 delegatedCollateral, USDUint256 lockedCredit)
     {
         return GlobalPerpsMarket.load().utilizationRate();
     }

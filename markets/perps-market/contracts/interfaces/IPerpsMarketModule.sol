@@ -1,6 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint256, USDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256,  BaseQuantoPerUSDUint256, USDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Perps market module
@@ -39,14 +39,14 @@ interface IPerpsMarketModule {
      * @param marketId Id of the market.
      * @return skew Skew of the market.
      */
-    function skew(uint128 marketId) external view returns (int256);
+    function skew(uint128 marketId) external view returns (BaseQuantoPerUSDInt256);
 
     /**
      * @notice Gets a market's size.
      * @param marketId Id of the market.
      * @return size Size of the market.
      */
-    function size(uint128 marketId) external view returns (uint256);
+    function size(uint128 marketId) external view returns (BaseQuantoPerUSDUint256);
 
     /**
      * @notice Gets a market's max open interest.

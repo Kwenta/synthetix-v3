@@ -13,7 +13,7 @@ import {PerpsPrice} from "./PerpsPrice.sol";
 import {Liquidation} from "./Liquidation.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
 import {InterestRate} from "./InterestRate.sol";
-import {BaseQuantoPerUSDInt256, USDPerBaseUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDInt128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt256, USDPerBaseUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Data for a single perps market
@@ -24,7 +24,10 @@ library PerpsMarket {
     using SafeCastI256 for int256;
     using SafeCastU256 for uint256;
     using SafeCastU128 for uint128;
+    using InteractionsBaseQuantoPerUSDInt256 for BaseQuantoPerUSDInt256;
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
+    using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsQuantoUint256 for QuantoUint256;
     using Position for Position.Data;
     using PerpsMarketConfiguration for PerpsMarketConfiguration.Data;
 
@@ -48,7 +51,7 @@ library PerpsMarket {
         string symbol;
         uint128 id;
         BaseQuantoPerUSDInt256 skew;
-        uint256 size;
+        BaseQuantoPerUSDUint256 size;
         int256 lastFundingRate;
         int256 lastFundingValue;
         uint256 lastFundingTime;
@@ -245,8 +248,8 @@ library PerpsMarket {
         Position.Data storage oldPosition = self.positions[accountId];
 
         self.size =
-            (self.size + MathUtil.abs128(newPosition.size.unwrap())) -
-            MathUtil.abs128(oldPosition.size.unwrap());
+            (self.size + newPosition.size.abs()) -
+            oldPosition.size.abs();
         self.skew = self.skew + newPosition.size.to256() - oldPosition.size.to256();
 
         runtime.currentPrice = USDPerBaseUint256.wrap(newPosition.latestInteractionPrice.unwrap().to256());
@@ -277,7 +280,7 @@ library PerpsMarket {
                 self.id,
                 interestRate,
                 self.skew.unwrap(),
-                self.size,
+                self.size.unwrap(),
                 self.lastFundingRate,
                 currentFundingVelocity(self)
             );
@@ -373,39 +376,39 @@ library PerpsMarket {
         if (!isReducingInterest) {
             BaseQuantoPerUSDInt256 newSkew = self.skew - oldSize.to256() + newSize.to256();
 
-            int256 newMarketSize = self.size.toInt() -
-                MathUtil.abs(oldSize.unwrap()).toInt() +
-                MathUtil.abs(newSize.unwrap()).toInt();
+            BaseQuantoPerUSDInt256 newMarketSize = self.size.toInt() -
+                oldSize.abs().toInt() +
+                newSize.abs().toInt();
 
-            int256 newSideSize;
-            if (0 < newSize.unwrap()) {
+            BaseQuantoPerUSDInt256 newSideSize;
+            if (InteractionsBaseQuantoPerUSDInt128.zero() < newSize) {
                 // long case: marketSize + skew
                 //            = (|longSize| + |shortSize|) + (longSize + shortSize)
                 //            = 2 * longSize
-                newSideSize = newMarketSize + newSkew.unwrap();
+                newSideSize = newMarketSize + newSkew;
             } else {
                 // short case: marketSize - skew
                 //            = (|longSize| + |shortSize|) - (longSize + shortSize)
                 //            = 2 * -shortSize
-                newSideSize = newMarketSize - newSkew.unwrap();
+                newSideSize = newMarketSize - newSkew;
             }
 
             // newSideSize still includes an extra factor of 2 here, so we will divide by 2 in the actual condition
-            if (maxSize.unwrap() < MathUtil.abs(newSideSize / 2)) {
+            if (maxSize < newSideSize.div(2).abs()) {
                 revert PerpsMarketConfiguration.MaxOpenInterestReached(
                     self.id,
                     maxSize,
-                    newSideSize / 2
+                    newSideSize.div(2).unwrap()
                 );
             }
 
             // same check but with value (size * price)
             // note that if maxValue param is set to 0, this validation is skipped
-            if (maxValue.unwrap() > 0 && maxValue.unwrap() < MathUtil.abs(newSideSize / 2).mulDecimal(price.unwrap())) {
+            if (maxValue.unwrap() > 0 && maxValue.unwrap() < MathUtil.abs(newSideSize.unwrap() / 2).mulDecimal(price.unwrap())) {
                 revert PerpsMarketConfiguration.MaxUSDOpenInterestReached(
                     self.id,
                     maxValue,
-                    newSideSize / 2,
+                    newSideSize.div(2).unwrap(),
                     price
                 );
             }
@@ -425,13 +428,13 @@ library PerpsMarket {
         return positionPnl + fundingPnl - self.debtCorrectionAccumulator;
     }
 
-    function requiredCredit(uint128 marketId) internal view returns (uint256) {
+    function requiredCredit(uint128 marketId) internal view returns (USDUint256) {
         return
             PerpsMarket
                 .load(marketId)
                 .size
-                .mulDecimal(PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT).unwrap())
-                .mulDecimal(PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT).unwrap())
+                .mulDecimalToQuanto(PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT))
+                .mulDecimalToUSD(PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT))
                 .mulDecimal(PerpsMarketConfiguration.load(marketId).lockedOiRatioD18);
     }
 

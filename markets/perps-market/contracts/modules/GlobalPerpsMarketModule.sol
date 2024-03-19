@@ -139,7 +139,7 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
         external
         view
         override
-        returns (uint256 totalCollateralValue)
+        returns (USDUint256 totalCollateralValue)
     {
         return GlobalPerpsMarket.load().totalCollateralValue();
     }

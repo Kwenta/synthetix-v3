@@ -11,7 +11,7 @@ import {NodeOutput} from "@synthetixio/oracle-manager/contracts/storage/NodeOutp
 import {NodeDefinition} from "@synthetixio/oracle-manager/contracts/storage/NodeDefinition.sol";
 import {SafeCastI256, SafeCastU256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
 import {SetUtil} from "@synthetixio/core-contracts/contracts/utils/SetUtil.sol";
-import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Main factory library that registers perps markets.  Also houses global configuration for all perps markets.
@@ -22,6 +22,7 @@ library PerpsMarketFactory {
     using SetUtil for SetUtil.UintSet;
     using GlobalPerpsMarket for GlobalPerpsMarket.Data;
     using PerpsMarket for PerpsMarket.Data;
+    using InteractionsUSDUint256 for USDUint256;
 
     bytes32 private constant _SLOT_PERPS_MARKET_FACTORY =
         keccak256(abi.encode("io.synthetix.perps-market.PerpsMarketFactory"));
@@ -80,9 +81,9 @@ library PerpsMarketFactory {
         self.perpsMarketId = perpsMarketId;
     }
 
-    function totalWithdrawableUsd() internal view returns (uint256) {
+    function totalWithdrawableUsd() internal view returns (USDUint256) {
         Data storage self = load();
-        return self.synthetix.getWithdrawableMarketUsd(self.perpsMarketId);
+        return USDUint256.wrap(self.synthetix.getWithdrawableMarketUsd(self.perpsMarketId));
     }
 
     function depositMarketCollateral(
