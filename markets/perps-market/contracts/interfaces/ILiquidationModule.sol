@@ -61,7 +61,7 @@ interface ILiquidationModule {
      * @param accountId Id of the account to liquidate.
      * @return liquidationReward total reward sent to liquidator.
      */
-    function liquidate(uint128 accountId) external returns (uint256 liquidationReward);
+    function liquidate(uint128 accountId) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Liquidates up to maxNumberOfAccounts flagged accounts.
@@ -70,7 +70,7 @@ interface ILiquidationModule {
      */
     function liquidateFlagged(
         uint256 maxNumberOfAccounts
-    ) external returns (uint256 liquidationReward);
+    ) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Liquidates the listed flagged accounts.
@@ -80,7 +80,7 @@ interface ILiquidationModule {
      */
     function liquidateFlaggedAccounts(
         uint128[] calldata accountIds
-    ) external returns (uint256 liquidationReward);
+    ) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Returns the list of flagged accounts.
