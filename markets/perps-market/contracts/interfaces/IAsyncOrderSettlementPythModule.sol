@@ -43,7 +43,7 @@ interface IAsyncOrderSettlementPythModule {
      * @param accountId Id of the account used for the trade.
      * @param interest interest charges
      */
-    event InterestCharged(uint128 indexed accountId, uint256 interest);
+    event InterestCharged(uint128 indexed accountId, QuantoUint256 interest);
 
     // only used due to stack too deep during settlement
     struct SettleOrderRuntime {

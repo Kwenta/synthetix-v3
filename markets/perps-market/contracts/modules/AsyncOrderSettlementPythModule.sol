@@ -164,7 +164,7 @@ contract AsyncOrderSettlementPythModule is
         asyncOrder.reset();
 
         // Note: new event for this due to stack too deep adding it to OrderSettled event
-        emit InterestCharged(runtime.accountId, runtime.chargedInterest.unwrap());
+        emit InterestCharged(runtime.accountId, runtime.chargedInterest);
 
         // emit event
         emit OrderSettled(
