@@ -119,16 +119,16 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
         view
         override
         returns (
-            uint256 minKeeperRewardUsd,
+            USDUint256 minKeeperRewardUsd,
             uint256 minKeeperProfitRatioD18,
-            uint256 maxKeeperRewardUsd,
+            USDUint256 maxKeeperRewardUsd,
             uint256 maxKeeperScalingRatioD18
         )
     {
         GlobalPerpsMarketConfiguration.Data storage store = GlobalPerpsMarketConfiguration.load();
-        minKeeperRewardUsd = store.minKeeperRewardUsd.unwrap();
+        minKeeperRewardUsd = store.minKeeperRewardUsd;
         minKeeperProfitRatioD18 = store.minKeeperProfitRatioD18;
-        maxKeeperRewardUsd = store.maxKeeperRewardUsd.unwrap();
+        maxKeeperRewardUsd = store.maxKeeperRewardUsd;
         maxKeeperScalingRatioD18 = store.maxKeeperScalingRatioD18;
     }
 
