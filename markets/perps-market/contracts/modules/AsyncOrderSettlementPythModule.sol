@@ -21,7 +21,7 @@ import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {USDUint256, USDPerBaseUint256, QuantoUint256, QuantoInt256, USDPerQuantoUint256, InteractionsQuantoUint256, InteractionsQuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDUint256, USDPerBaseUint256, QuantoUint256, QuantoInt256, USDPerQuantoUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for settling async orders using pyth as price feed.
@@ -125,7 +125,7 @@ contract AsyncOrderSettlementPythModule is
 
         // since margin is deposited when trader deposits, as long as the owed collateral is deducted
         // from internal accounting, fees are automatically realized by the stakers
-        if (runtime.amountToDeduct.unwrap() > 0) {
+        if (runtime.amountToDeduct > InteractionsUSDUint256.zero()) {
             (runtime.deductedSynthIds, runtime.deductedAmount) = perpsAccount.deductFromAccount(
                 runtime.amountToDeduct
             );
@@ -147,7 +147,7 @@ contract AsyncOrderSettlementPythModule is
             settlementStrategy.settlementReward +
             KeeperCosts.load().getSettlementKeeperCosts();
 
-        if (runtime.settlementReward.unwrap() > 0) {
+        if (runtime.settlementReward > InteractionsUSDUint256.zero()) {
             // pay keeper
             factory.withdrawMarketUsd(ERC2771Context._msgSender(), runtime.settlementReward);
         }
