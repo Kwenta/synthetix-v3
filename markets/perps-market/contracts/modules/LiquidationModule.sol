@@ -62,10 +62,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
                 emit AccountFlaggedForLiquidation(
                     accountId,
-                    availableMargin.unwrap(),
-                    requiredMaintenaceMargin.unwrap(),
-                    expectedLiquidationReward.unwrap(),
-                    flagCost.unwrap()
+                    availableMargin,
+                    requiredMaintenaceMargin,
+                    expectedLiquidationReward,
+                    flagCost
                 );
 
                 liquidationReward = _liquidateAccount(account, flagCost.unwrap(), marginCollected.unwrap(), true);

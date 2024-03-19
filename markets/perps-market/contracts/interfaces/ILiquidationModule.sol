@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
+import {USDInt256, USDUint256} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
+
 /**
  * @title Liquidation module
  */
@@ -34,10 +36,10 @@ interface ILiquidationModule {
      */
     event AccountFlaggedForLiquidation(
         uint128 indexed accountId,
-        int256 availableMargin,
-        uint256 requiredMaintenanceMargin,
-        uint256 liquidationReward,
-        uint256 flagReward
+        USDInt256 availableMargin,
+        USDUint256 requiredMaintenanceMargin,
+        USDUint256 liquidationReward,
+        USDUint256 flagReward
     );
 
     /**
