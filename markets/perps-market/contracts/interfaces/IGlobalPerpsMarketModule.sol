@@ -34,9 +34,9 @@ interface IGlobalPerpsMarketModule {
      * @param maxKeeperScalingRatioD18 Scaling used to calculate the Maximum keeper reward together with maxKeeperRewardUsd.
      */
     event KeeperRewardGuardsSet(
-        uint256 minKeeperRewardUsd,
+        USDUint256 minKeeperRewardUsd,
         uint256 minKeeperProfitRatioD18,
-        uint256 maxKeeperRewardUsd,
+        USDUint256 maxKeeperRewardUsd,
         uint256 maxKeeperScalingRatioD18
     );
 

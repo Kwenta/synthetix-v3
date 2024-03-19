@@ -104,9 +104,9 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
         store.maxKeeperScalingRatioD18 = maxKeeperScalingRatioD18;
 
         emit KeeperRewardGuardsSet(
-            minKeeperRewardUsd.unwrap(),
+            minKeeperRewardUsd,
             minKeeperProfitRatioD18,
-            maxKeeperRewardUsd.unwrap(),
+            maxKeeperRewardUsd,
             maxKeeperScalingRatioD18
         );
     }
