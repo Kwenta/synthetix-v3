@@ -20,7 +20,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {IMarket} from "@synthetixio/main/contracts/interfaces/external/IMarket.sol";
 import {SetUtil} from "@synthetixio/core-contracts/contracts/utils/SetUtil.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {USDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDUint256, USDInt256, InteractionsUSDUint256, InteractionsUSDInt256, InteractionsUSDUint256, InteractionsUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for registering perpetual futures markets. The factory tracks all markets in the system and consolidates implementation.
@@ -34,6 +34,8 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
     using SafeCastI256 for int256;
     using SetUtil for SetUtil.UintSet;
     using PerpsMarket for PerpsMarket.Data;
+    using InteractionsUSDUint256 for USDUint256;
+    using InteractionsUSDInt256 for USDInt256;
 
     bytes32 private constant _ACCOUNT_TOKEN_SYSTEM = "accountNft";
 
@@ -119,19 +121,19 @@ contract PerpsMarketFactoryModule is IPerpsMarketFactoryModule {
             // can be computed as total collateral value - sum_each_market( debt )
             GlobalPerpsMarket.Data storage globalMarket = GlobalPerpsMarket.load();
             USDUint256 collateralValue = globalMarket.totalCollateralValue();
-            int256 totalMarketDebt;
+            USDInt256 totalMarketDebt;
 
             SetUtil.UintSet storage activeMarkets = globalMarket.activeMarkets;
             uint256 activeMarketsLength = activeMarkets.length();
             for (uint256 i = 1; i <= activeMarketsLength; i++) {
                 uint128 marketId = activeMarkets.valueAt(i).to128();
-                totalMarketDebt += PerpsMarket.load(marketId).marketDebt(
+                totalMarketDebt = totalMarketDebt + PerpsMarket.load(marketId).marketDebt(
                     PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT)
                 );
             }
 
-            int256 totalDebt = collateralValue.unwrap().toInt() + totalMarketDebt;
-            return MathUtil.max(0, totalDebt).toUint();
+            USDInt256 totalDebt = collateralValue.toInt() + totalMarketDebt;
+            return totalDebt.max(InteractionsUSDInt256.zero()).toUint().unwrap();
         }
 
         return 0;

@@ -7,7 +7,7 @@ import {PerpsMarket} from "./PerpsMarket.sol";
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {InterestRate} from "./InterestRate.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerBaseInt256, QuantoUint256, QuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseUint128, BaseQuantoPerUSDInt256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerBaseInt256, USDPerBaseInt128, QuantoUint256, QuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseUint128, BaseQuantoPerUSDInt256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDPerBaseInt128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 library Position {
     using SafeCastU256 for uint256;
@@ -21,6 +21,7 @@ library Position {
     using InteractionsBaseQuantoPerUSDInt256 for BaseQuantoPerUSDInt256;
     using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
     using InteractionsUSDPerBaseUint128 for USDPerBaseUint128;
+    using InteractionsUSDPerBaseInt128 for USDPerBaseInt128;
     using InteractionsQuantoUint256 for QuantoUint256;
 
     struct Data {
@@ -28,7 +29,7 @@ library Position {
         BaseQuantoPerUSDInt128 size;
         USDPerBaseUint128 latestInteractionPrice;
         uint256 latestInterestAccrued;
-        int128 latestInteractionFunding;
+        USDPerBaseInt128 latestInteractionFunding;
     }
 
     function update(
@@ -56,7 +57,7 @@ library Position {
             QuantoUint256 chargedInterest,
             QuantoInt256 accruedFunding,
             USDPerBaseInt256 netFundingPerUnit,
-            int256 nextFunding
+            USDPerBaseInt256 nextFunding
         )
     {
         (
@@ -82,11 +83,11 @@ library Position {
             QuantoUint256 chargedInterest,
             QuantoInt256 accruedFunding,
             USDPerBaseInt256 netFundingPerUnit,
-            int256 nextFunding
+            USDPerBaseInt256 nextFunding
         )
     {
         nextFunding = PerpsMarket.load(self.marketId).calculateNextFunding(price);
-        netFundingPerUnit = USDPerBaseInt256.wrap(nextFunding - self.latestInteractionFunding);
+        netFundingPerUnit = nextFunding - self.latestInteractionFunding.to256();
         accruedFunding = self.size.to256().mulDecimalToQuanto(netFundingPerUnit);
 
         USDPerBaseInt256 priceShift = price.toInt() - self.latestInteractionPrice.to256().toInt();

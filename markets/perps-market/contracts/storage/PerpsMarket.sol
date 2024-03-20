@@ -13,7 +13,7 @@ import {PerpsPrice} from "./PerpsPrice.sol";
 import {Liquidation} from "./Liquidation.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
 import {InterestRate} from "./InterestRate.sol";
-import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint128, USDPerBaseUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256, InteractionsBaseQuantoPerUSDUint128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint128, USDPerBaseUint256, USDPerBaseInt256, USDPerQuantoUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, USDInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDPerBaseUint256, InteractionsQuantoInt256, InteractionsUSDPerQuantoUint256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Data for a single perps market
@@ -28,7 +28,11 @@ library PerpsMarket {
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
+    using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
+    using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
+    using InteractionsUSDPerBaseInt256 for USDPerBaseInt256;
     using InteractionsQuantoUint256 for QuantoUint256;
+    using InteractionsQuantoInt256 for QuantoInt256;
     using Position for Position.Data;
     using PerpsMarketConfiguration for PerpsMarketConfiguration.Data;
 
@@ -54,7 +58,7 @@ library PerpsMarket {
         BaseQuantoPerUSDInt256 skew;
         BaseQuantoPerUSDUint256 size;
         int256 lastFundingRate;
-        int256 lastFundingValue;
+        USDPerBaseInt256 lastFundingValue;
         uint256 lastFundingTime;
         // solhint-disable-next-line var-name-mixedcase
         uint128 __unused_1;
@@ -62,7 +66,7 @@ library PerpsMarket {
         uint128 __unused_2;
         // debt calculation
         // accumulates total notional size of the market including accrued funding until the last time any position changed
-        int256 debtCorrectionAccumulator;
+        QuantoInt256 debtCorrectionAccumulator;
         // accountId => asyncOrder
         mapping(uint256 => AsyncOrder.Data) asyncOrders;
         // accountId => position
@@ -225,9 +229,9 @@ library PerpsMarket {
 
     struct PositionDataRuntime {
         USDPerBaseUint256 currentPrice;
-        int256 sizeDelta;
-        int256 fundingDelta;
-        int256 notionalDelta;
+        BaseQuantoPerUSDInt256 sizeDelta;
+        QuantoInt256 fundingDelta;
+        QuantoInt256 notionalDelta;
     }
 
     /**
@@ -251,19 +255,20 @@ library PerpsMarket {
         runtime.currentPrice = USDPerBaseUint256.wrap(newPosition.latestInteractionPrice.unwrap().to256());
         (, QuantoInt256 pricePnl, , QuantoInt256 fundingPnl, , ) = oldPosition.getPnl(runtime.currentPrice);
 
-        runtime.sizeDelta = newPosition.size.unwrap() - oldPosition.size.unwrap();
-        runtime.fundingDelta = calculateNextFunding(self, runtime.currentPrice).mulDecimal(
+        runtime.sizeDelta = (newPosition.size - oldPosition.size).to256();
+        runtime.fundingDelta = calculateNextFunding(self, runtime.currentPrice).mulDecimalToQuanto(
             runtime.sizeDelta
         );
-        runtime.notionalDelta = runtime.currentPrice.unwrap().toInt().mulDecimal(runtime.sizeDelta);
+        runtime.notionalDelta = runtime.currentPrice.toInt().mulDecimalToQuanto(runtime.sizeDelta);
 
         // update the market debt correction accumulator before losing oldPosition details
         // by adding the new updated notional (old - new size) plus old position pnl
-        self.debtCorrectionAccumulator +=
+        self.debtCorrectionAccumulator =
+            self.debtCorrectionAccumulator +
             runtime.fundingDelta +
             runtime.notionalDelta +
-            pricePnl.unwrap() +
-            fundingPnl.unwrap();
+            pricePnl +
+            fundingPnl;
 
         // update position to new position
         // Note: once market interest rate is updated, the current accrued interest is saved
@@ -285,7 +290,7 @@ library PerpsMarket {
     function recomputeFunding(
         Data storage self,
         USDPerBaseUint256 price
-    ) internal returns (int256 fundingRate, int256 fundingValue) {
+    ) internal returns (int256 fundingRate, USDPerBaseInt256 fundingValue) {
         fundingRate = currentFundingRate(self);
         fundingValue = calculateNextFunding(self, price);
 
@@ -299,18 +304,18 @@ library PerpsMarket {
     function calculateNextFunding(
         Data storage self,
         USDPerBaseUint256 price
-    ) internal view returns (int256 nextFunding) {
+    ) internal view returns (USDPerBaseInt256 nextFunding) {
         nextFunding = self.lastFundingValue + unrecordedFunding(self, price);
     }
 
-    function unrecordedFunding(Data storage self, USDPerBaseUint256 price) internal view returns (int256) {
+    function unrecordedFunding(Data storage self, USDPerBaseUint256 price) internal view returns (USDPerBaseInt256) {
         int256 fundingRate = currentFundingRate(self);
         // note the minus sign: funding flows in the opposite direction to the skew.
         int256 avgFundingRate = -(self.lastFundingRate + fundingRate).divDecimal(
             (DecimalMath.UNIT * 2).toInt()
         );
 
-        return avgFundingRate.mulDecimal(proportionalElapsed(self)).mulDecimal(price.unwrap().toInt());
+        return price.toInt().mulDecimal(avgFundingRate.mulDecimal(proportionalElapsed(self)));
     }
 
     function currentFundingRate(Data storage self) internal view returns (int256) {
@@ -415,13 +420,14 @@ library PerpsMarket {
      * @dev Returns the market debt incurred by all positions
      * @notice  Market debt is the sum of all position sizes multiplied by the price, and old positions pnl that is included in the debt correction accumulator.
      */
-    function marketDebt(Data storage self, USDPerBaseUint256 price) internal view returns (int256) {
+    function marketDebt(Data storage self, USDPerBaseUint256 price) internal view returns (USDInt256) {
         // all positions sizes multiplied by the price is equivalent to skew times price
         // and the debt correction accumulator is the  sum of all positions pnl
-        int256 positionPnl = self.skew.unwrap().mulDecimal(price.unwrap().toInt());
-        int256 fundingPnl = self.skew.unwrap().mulDecimal(calculateNextFunding(self, price));
+        QuantoInt256 positionPnl = self.skew.mulDecimalToQuanto(price.toInt());
+        QuantoInt256 fundingPnl = self.skew.mulDecimalToQuanto(calculateNextFunding(self, price));
 
-        return positionPnl + fundingPnl - self.debtCorrectionAccumulator;
+        return (positionPnl + fundingPnl - self.debtCorrectionAccumulator)
+            .mulDecimalToUSD(PerpsPrice.getCurrentQuantoPrice(self.id, PerpsPrice.Tolerance.DEFAULT).toInt());
     }
 
     function requiredCredit(uint128 marketId) internal view returns (USDUint256) {

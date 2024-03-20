@@ -18,7 +18,7 @@ import {GlobalPerpsMarketConfiguration} from "./GlobalPerpsMarketConfiguration.s
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDUint256, InteractionsUSDPerBaseUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseInt256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDUint256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 uint128 constant SNX_USD_MARKET_ID = 0;
 
@@ -49,6 +49,7 @@ library PerpsAccount {
     using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
+    using InteractionsUSDPerBaseInt256 for USDPerBaseInt256;
 
     struct Data {
         // @dev synth marketId => amount
