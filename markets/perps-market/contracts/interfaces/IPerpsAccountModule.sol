@@ -66,7 +66,7 @@ interface IPerpsAccountModule {
      * @param accountId Id of the account.
      * @return collateralValue total collateral value of the account. USD denominated.
      */
-    function totalCollateralValue(uint128 accountId) external view returns (uint256);
+    function totalCollateralValue(uint128 accountId) external view returns (USDUint256);
 
     /**
      * @notice Gets the account's total open interest value.
