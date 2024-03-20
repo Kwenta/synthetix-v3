@@ -63,7 +63,7 @@ library PerpsMarketConfiguration {
         /**
          * @dev minimum position value in the quanto asset, this is a constant value added to position margin requirements (initial/maintenance)
          */
-        uint256 minimumPositionMargin;
+        QuantoUint256 minimumPositionMargin;
         /**
          * @dev This value gets applied to the initial margin ratio to ensure there's a cap on the max leverage regardless of position size
          */
@@ -146,10 +146,10 @@ library PerpsMarketConfiguration {
 
         QuantoUint256 notional = sizeAbs.mulDecimalToQuanto(price);
 
-        initialMargin = notional.mulDecimal(initialMarginRatio) + QuantoUint256.wrap(self.minimumPositionMargin);
+        initialMargin = notional.mulDecimal(initialMarginRatio) + self.minimumPositionMargin;
         maintenanceMargin =
             notional.mulDecimal(maintenanceMarginRatio) +
-            QuantoUint256.wrap(self.minimumPositionMargin);
+            self.minimumPositionMargin;
     }
 
     /**
