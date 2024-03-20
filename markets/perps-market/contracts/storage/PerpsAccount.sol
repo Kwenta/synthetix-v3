@@ -564,7 +564,7 @@ library PerpsAccount {
 
         BaseQuantoPerUSDInt128 oldPositionSize = position.size;
         oldPositionAbsSize = oldPositionSize.abs128();
-        amountToLiquidate = BaseQuantoPerUSDUint128.wrap(perpsMarket.maxLiquidatableAmount(oldPositionAbsSize.unwrap()));
+        amountToLiquidate = perpsMarket.maxLiquidatableAmount(oldPositionAbsSize);
 
         if (amountToLiquidate.unwrap() == 0) {
             return (InteractionsBaseQuantoPerUSDUint128.zero(), oldPositionSize, InteractionsBaseQuantoPerUSDInt128.zero(), oldPositionAbsSize, marketUpdateData);

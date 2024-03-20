@@ -13,7 +13,7 @@ import {PerpsPrice} from "./PerpsPrice.sol";
 import {Liquidation} from "./Liquidation.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
 import {InterestRate} from "./InterestRate.sol";
-import {BaseQuantoPerUSDInt256, USDPerBaseUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint128, USDPerBaseUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256, InteractionsBaseQuantoPerUSDUint128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Data for a single perps market
@@ -27,6 +27,7 @@ library PerpsMarket {
     using InteractionsBaseQuantoPerUSDInt256 for BaseQuantoPerUSDInt256;
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
     using InteractionsQuantoUint256 for QuantoUint256;
     using Position for Position.Data;
     using PerpsMarketConfiguration for PerpsMarketConfiguration.Data;
@@ -121,8 +122,8 @@ library PerpsMarket {
      */
     function maxLiquidatableAmount(
         Data storage self,
-        uint128 requestedLiquidationAmount
-    ) internal returns (uint128 liquidatableAmount) {
+        BaseQuantoPerUSDUint128 requestedLiquidationAmount
+    ) internal returns (BaseQuantoPerUSDUint128 liquidatableAmount) {
         PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(self.id);
 
         // if endorsedLiquidator is configured and is the sender, allow full liquidation
@@ -132,25 +133,22 @@ library PerpsMarket {
         }
 
         (
-            uint256 liquidationCapacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 liquidationCapacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         ) = currentLiquidationCapacity(self, marketConfig);
 
         // this would only occur if there was a misconfiguration (like skew scale not being set)
         // or the max liquidation window not being set etc.
         // in this case, return the entire requested liquidation amount
-        if (maxLiquidationInWindow == 0) {
+        if (maxLiquidationInWindow.isZero()) {
             return requestedLiquidationAmount;
         }
 
         uint256 maxLiquidationPd = marketConfig.maxLiquidationPd;
         // if liquidation capacity exists, update accordingly
-        if (liquidationCapacity != 0) {
-            liquidatableAmount = MathUtil.min128(
-                liquidationCapacity.to128(),
-                requestedLiquidationAmount
-            );
+        if (!liquidationCapacity.isZero()) {
+            liquidatableAmount = liquidationCapacity.to128().min128(requestedLiquidationAmount);
         } else if (
             maxLiquidationPd != 0 &&
             // only allow this if the last update was not in the current block
@@ -162,26 +160,24 @@ library PerpsMarket {
              */
             uint256 currentPd = MathUtil.abs(self.skew.unwrap()).divDecimal(marketConfig.skewScale);
             if (currentPd < maxLiquidationPd) {
-                liquidatableAmount = MathUtil.min128(
-                    maxLiquidationInWindow.to128(),
-                    requestedLiquidationAmount
-                );
+                liquidatableAmount = maxLiquidationInWindow.to128().min128(requestedLiquidationAmount);
             }
         }
 
-        if (liquidatableAmount > 0) {
+        if (liquidatableAmount > InteractionsBaseQuantoPerUSDUint128.zero()) {
             _updateLiquidationData(self, liquidatableAmount);
         }
     }
 
-    function _updateLiquidationData(Data storage self, uint128 liquidationAmount) private {
+    function _updateLiquidationData(Data storage self, BaseQuantoPerUSDUint128 liquidationAmount) private {
         uint256 liquidationDataLength = self.liquidationData.length;
         uint256 currentTimestamp = liquidationDataLength == 0
             ? 0
             : self.liquidationData[liquidationDataLength - 1].timestamp;
 
         if (currentTimestamp == block.timestamp) {
-            self.liquidationData[liquidationDataLength - 1].amount += liquidationAmount;
+            Liquidation.Data storage liquidationData = self.liquidationData[liquidationDataLength - 1];
+            liquidationData.amount = liquidationData.amount + liquidationAmount;
         } else {
             self.liquidationData.push(
                 Liquidation.Data({amount: liquidationAmount, timestamp: block.timestamp})
@@ -201,13 +197,13 @@ library PerpsMarket {
         internal
         view
         returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 capacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         )
     {
         maxLiquidationInWindow = marketConfig.maxLiquidationAmountInWindow();
-        uint256 accumulatedLiquidationAmounts;
+        BaseQuantoPerUSDUint256 accumulatedLiquidationAmounts;
         uint256 liquidationDataLength = self.liquidationData.length;
         if (liquidationDataLength == 0) return (maxLiquidationInWindow, maxLiquidationInWindow, 0);
 
@@ -216,15 +212,15 @@ library PerpsMarket {
         uint256 windowStartTimestamp = block.timestamp - marketConfig.maxSecondsInLiquidationWindow;
 
         while (self.liquidationData[currentIndex].timestamp > windowStartTimestamp) {
-            accumulatedLiquidationAmounts += self.liquidationData[currentIndex].amount;
+            Liquidation.Data storage liquidationData = self.liquidationData[liquidationDataLength - 1];
+            accumulatedLiquidationAmounts = accumulatedLiquidationAmounts + liquidationData.amount.to256();
 
             if (currentIndex == 0) break;
             currentIndex--;
         }
-        int256 availableLiquidationCapacity = maxLiquidationInWindow.toInt() -
+        BaseQuantoPerUSDInt256 availableLiquidationCapacity = maxLiquidationInWindow.toInt() -
             accumulatedLiquidationAmounts.toInt();
-        // solhint-disable-next-line numcast/safe-cast
-        capacity = MathUtil.max(availableLiquidationCapacity, int256(0)).toUint();
+        capacity = availableLiquidationCapacity.max(InteractionsBaseQuantoPerUSDInt256.zero()).toUint();
     }
 
     struct PositionDataRuntime {

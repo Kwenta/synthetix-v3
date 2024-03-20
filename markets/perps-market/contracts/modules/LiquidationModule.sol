@@ -150,8 +150,8 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         view
         override
         returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 capacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         )
     {

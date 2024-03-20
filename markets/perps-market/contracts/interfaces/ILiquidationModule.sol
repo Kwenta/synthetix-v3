@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
-import {USDInt256, USDUint256} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
+import {USDInt256, USDUint256, BaseQuantoPerUSDUint256} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Liquidation module
@@ -106,8 +106,8 @@ interface ILiquidationModule {
         external
         view
         returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 capacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         );
 }

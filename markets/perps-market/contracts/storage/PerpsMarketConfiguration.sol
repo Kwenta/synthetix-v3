@@ -97,19 +97,19 @@ library PerpsMarketConfiguration {
         }
     }
 
-    function maxLiquidationAmountInWindow(Data storage self) internal view returns (uint256) {
+    function maxLiquidationAmountInWindow(Data storage self) internal view returns (BaseQuantoPerUSDUint256) {
         OrderFee.Data storage orderFeeData = self.orderFees;
         return
-            (orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
+            BaseQuantoPerUSDUint256.wrap((orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
                 self.maxLiquidationLimitAccumulationMultiplier
-            ) * self.maxSecondsInLiquidationWindow;
+            ) * self.maxSecondsInLiquidationWindow);
     }
 
     function numberOfLiquidationWindows(
         Data storage self,
         BaseQuantoPerUSDUint256 positionSize
     ) internal view returns (uint256) {
-        return MathUtil.ceilDivide(positionSize.unwrap(), maxLiquidationAmountInWindow(self));
+        return MathUtil.ceilDivide(positionSize.unwrap(), maxLiquidationAmountInWindow(self).unwrap());
     }
 
     function calculateFlagReward(
