@@ -460,15 +460,15 @@ library AsyncOrder {
         //
         // we then multiply the sizes by the fill price to get the notional value of each side, and that times the fee rate for each side
 
-        uint256 makerFee = MathUtil.abs(marketSkew.unwrap()).mulDecimal(fillPrice.unwrap()).mulDecimal(
+        QuantoUint256 makerFee = marketSkew.abs().mulDecimalToQuanto(fillPrice).mulDecimal(
             orderFeeData.makerFee
         );
 
-        uint256 takerFee = MathUtil.abs(marketSkew.unwrap() + sizeDelta.unwrap()).mulDecimal(fillPrice.unwrap()).mulDecimal(
+        QuantoUint256 takerFee = (marketSkew + sizeDelta.to256()).abs().mulDecimalToQuanto(fillPrice).mulDecimal(
             orderFeeData.takerFee
         );
 
-        return QuantoUint256.wrap(takerFee + makerFee);
+        return takerFee + makerFee;
     }
 
     /**
