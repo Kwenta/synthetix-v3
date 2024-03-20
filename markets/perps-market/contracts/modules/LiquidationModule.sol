@@ -219,7 +219,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                     .calculateFlagReward(oldPositionAbsSize.to256().mulDecimalToQuanto(runtime.price)).mulDecimalToUSD(quantoPrice);
             }
 
-            if (amountLiquidated.unwrap() == 0) {
+            if (amountLiquidated.isZero()) {
                 continue;
             }
 
@@ -239,8 +239,8 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             emit PositionLiquidated(
                 runtime.accountId,
                 runtime.positionMarketId,
-                amountLiquidated.unwrap(),
-                newPositionSize.unwrap()
+                amountLiquidated,
+                newPositionSize
             );
         }
 

@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
-import {USDInt256, USDUint256, BaseQuantoPerUSDUint256} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
+import {USDInt256, USDUint256, BaseQuantoPerUSDUint256, BaseQuantoPerUSDUint128, BaseQuantoPerUSDInt128} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title Liquidation module
@@ -22,8 +22,8 @@ interface ILiquidationModule {
     event PositionLiquidated(
         uint128 indexed accountId,
         uint128 indexed marketId,
-        uint256 amountLiquidated,
-        int128 currentPositionSize
+        BaseQuantoPerUSDUint128 amountLiquidated,
+        BaseQuantoPerUSDInt128 currentPositionSize
     );
 
     /**
