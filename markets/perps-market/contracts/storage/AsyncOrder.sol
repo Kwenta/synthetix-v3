@@ -436,7 +436,7 @@ library AsyncOrder {
         QuantoInt256 notionalDiff = sizeDelta.to256().mulDecimalToQuanto(fillPrice.toInt());
 
         // does this trade keep the skew on one side?
-        if (MathUtil.sameSide(marketSkew.unwrap() + sizeDelta.unwrap(), marketSkew.unwrap())) {
+        if ((marketSkew + sizeDelta.to256()).sameSide(marketSkew)) {
             // use a flat maker/taker fee for the entire size depending on whether the skew is increased or reduced.
             //
             // if the order is submitted on the same side as the skew (increasing it) - the taker fee is charged.
