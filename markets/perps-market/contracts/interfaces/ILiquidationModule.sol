@@ -51,7 +51,7 @@ interface ILiquidationModule {
      */
     event AccountLiquidationAttempt(
         uint128 indexed accountId,
-        uint256 reward,
+        USDUint256 reward,
         bool fullLiquidation
     );
 

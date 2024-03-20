@@ -247,7 +247,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         runtime.totalLiquidationCost =
             KeeperCosts.load().getLiquidateKeeperCosts() +
             costOfFlagExecution;
-        if (positionFlagged || runtime.totalLiquidated.unwrap() > 0) {
+        if (positionFlagged || runtime.totalLiquidated > InteractionsBaseQuantoPerUSDUint256.zero()) {
             keeperLiquidationReward = _processLiquidationRewards(
                 positionFlagged ? runtime.totalFlaggingRewards : InteractionsUSDUint256.zero(),
                 runtime.totalLiquidationCost,
@@ -261,7 +261,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
         emit AccountLiquidationAttempt(
             runtime.accountId,
-            keeperLiquidationReward.unwrap(),
+            keeperLiquidationReward,
             runtime.accountFullyLiquidated
         );
     }
