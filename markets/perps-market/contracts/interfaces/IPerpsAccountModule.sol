@@ -101,7 +101,7 @@ interface IPerpsAccountModule {
     function getOpenPositionSize(
         uint128 accountId,
         uint128 marketId
-    ) external view returns (int128 positionSize);
+    ) external view returns (BaseQuantoPerUSDInt128 positionSize);
 
     /**
      * @notice Gets the available margin of an account. It can be negative due to pnl.

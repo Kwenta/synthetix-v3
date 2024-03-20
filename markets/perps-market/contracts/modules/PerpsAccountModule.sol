@@ -128,10 +128,10 @@ contract PerpsAccountModule is IPerpsAccountModule {
     function getOpenPositionSize(
         uint128 accountId,
         uint128 marketId
-    ) external view override returns (int128 positionSize) {
+    ) external view override returns (BaseQuantoPerUSDInt128 positionSize) {
         PerpsMarket.Data storage perpsMarket = PerpsMarket.loadValid(marketId);
 
-        positionSize = perpsMarket.positions[accountId].size.unwrap();
+        positionSize = perpsMarket.positions[accountId].size;
     }
 
     /**
