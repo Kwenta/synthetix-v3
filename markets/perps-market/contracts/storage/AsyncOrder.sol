@@ -179,7 +179,7 @@ library AsyncOrder {
     function checkPendingOrder(uint128 accountId) internal view returns (Data storage order) {
         order = load(accountId);
 
-        if (order.request.sizeDelta.unwrap() != 0) {
+        if (!order.request.sizeDelta.isZero()) {
             SettlementStrategy.Data storage strategy = PerpsMarketConfiguration
                 .load(order.request.marketId)
                 .settlementStrategies[order.request.settlementStrategyId];
