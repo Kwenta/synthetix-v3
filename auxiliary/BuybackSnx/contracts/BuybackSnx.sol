@@ -9,6 +9,7 @@ import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC277
 import {IFeeCollector} from "@synthetixio/perps-market/contracts/interfaces/external/IFeeCollector.sol";
 import {INodeModule} from "@synthetixio/oracle-manager/contracts/interfaces/INodeModule.sol";
 import {NodeOutput} from "@synthetixio/oracle-manager/contracts/storage/NodeOutput.sol";
+import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 contract BuybackSnx is IFeeCollector {
     using SafeCastI256 for int256;
@@ -56,9 +57,9 @@ contract BuybackSnx is IFeeCollector {
     // Implement FeeCollector interface
     function quoteFees(
         uint128 marketId,
-        uint256 feeAmount,
+        USDUint256 feeAmount,
         address sender
-    ) external view override returns (uint256) {
+    ) external view override returns (USDUint256) {
         // mention the variables in the block to prevent unused local variable warning
         marketId;
         sender;
