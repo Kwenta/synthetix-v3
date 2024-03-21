@@ -93,8 +93,8 @@ contract PerpsMarketModule is IPerpsMarketModule {
         PerpsMarket.Data storage market = PerpsMarket.load(marketId);
         return
             MarketSummary({
-                skew: market.skew.unwrap(),
-                size: market.size.unwrap(),
+                skew: market.skew,
+                size: market.size,
                 maxOpenInterest: this.maxOpenInterest(marketId),
                 currentFundingRate: market.currentFundingRate(),
                 currentFundingVelocity: market.currentFundingVelocity(),
