@@ -283,7 +283,7 @@ library AsyncOrder {
         runtime.accountId = order.request.accountId;
         runtime.marketId = order.request.marketId;
 
-        if (runtime.sizeDelta.unwrap() == 0) {
+        if (runtime.sizeDelta.isZero()) {
             revert ZeroSizeOrder();
         }
 
