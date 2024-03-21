@@ -21,7 +21,7 @@ interface IPerpsMarketModule {
         // @dev Current funding velocity of the market
         int256 currentFundingVelocity;
         // @dev Index price of the market
-        uint256 indexPrice;
+        USDPerBaseUint256 indexPrice;
     }
 
     /**
@@ -74,7 +74,7 @@ interface IPerpsMarketModule {
      * @param marketId Id of the market.
      * @return indexPrice Index price of the market.
      */
-    function indexPrice(uint128 marketId) external view returns (uint256);
+    function indexPrice(uint128 marketId) external view returns (USDPerBaseUint256);
 
     /**
      * @notice Gets a market's fill price for a specific order size and index price.
