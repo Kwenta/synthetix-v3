@@ -216,7 +216,7 @@ library PerpsMarket {
         uint256 windowStartTimestamp = block.timestamp - marketConfig.maxSecondsInLiquidationWindow;
 
         while (self.liquidationData[currentIndex].timestamp > windowStartTimestamp) {
-            Liquidation.Data storage liquidationData = self.liquidationData[liquidationDataLength - 1];
+            Liquidation.Data storage liquidationData = self.liquidationData[currentIndex];
             accumulatedLiquidationAmounts = accumulatedLiquidationAmounts + liquidationData.amount.to256();
 
             if (currentIndex == 0) break;
