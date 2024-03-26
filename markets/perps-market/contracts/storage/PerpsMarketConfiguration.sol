@@ -109,7 +109,9 @@ library PerpsMarketConfiguration {
         Data storage self,
         BaseQuantoPerUSDUint256 positionSize
     ) internal view returns (uint256) {
-        return positionSize.ceilDivide(maxLiquidationAmountInWindow(self));
+        BaseQuantoPerUSDUint256 maxLiquidation = maxLiquidationAmountInWindow(self);
+        if (maxLiquidation.isZero()) return 0;
+        return positionSize.ceilDivide(maxLiquidation);
     }
 
     function calculateFlagReward(
