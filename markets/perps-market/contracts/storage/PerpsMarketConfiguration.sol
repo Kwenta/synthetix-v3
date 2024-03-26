@@ -71,7 +71,7 @@ library PerpsMarketConfiguration {
         /**
          * @dev Threshold for allowing further liquidations when max liquidation amount is reached
          */
-        uint256 maxLiquidationPd;
+        BaseQuantoPerUSDUint256 maxLiquidationPd;
         /**
          * @dev if the msg.sender is this endorsed liquidator during an account liquidation, the max liquidation amount doesn't apply.
          * @dev this address is allowed to fully liquidate any account eligible for liquidation.

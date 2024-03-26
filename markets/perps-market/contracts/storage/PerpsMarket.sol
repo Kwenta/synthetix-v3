@@ -150,12 +150,12 @@ library PerpsMarket {
             return requestedLiquidationAmount;
         }
 
-        uint256 maxLiquidationPd = marketConfig.maxLiquidationPd;
+        BaseQuantoPerUSDUint256 maxLiquidationPd = marketConfig.maxLiquidationPd;
         // if liquidation capacity exists, update accordingly
         if (!liquidationCapacity.isZero()) {
             liquidatableAmount = liquidationCapacity.to128().min128(requestedLiquidationAmount);
         } else if (
-            maxLiquidationPd != 0 &&
+            !maxLiquidationPd.isZero() &&
             // only allow this if the last update was not in the current block
             latestLiquidationTimestamp != block.timestamp
         ) {
@@ -163,7 +163,7 @@ library PerpsMarket {
                 if capacity is at 0, but the market is under configured liquidation p/d,
                 another block of liquidation becomes allowable.
              */
-            uint256 currentPd = MathUtil.abs(self.skew.unwrap()).divDecimal(marketConfig.skewScale);
+            BaseQuantoPerUSDUint256 currentPd = self.skew.abs().divDecimal(marketConfig.skewScale);
             if (currentPd < maxLiquidationPd) {
                 liquidatableAmount = maxLiquidationInWindow.to128().min128(requestedLiquidationAmount);
             }

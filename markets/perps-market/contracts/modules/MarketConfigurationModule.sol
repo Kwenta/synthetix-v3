@@ -211,7 +211,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         uint128 marketId,
         uint256 maxLiquidationLimitAccumulationMultiplier,
         uint256 maxSecondsInLiquidationWindow,
-        uint256 maxLiquidationPd,
+        BaseQuantoPerUSDUint256 maxLiquidationPd,
         address endorsedLiquidator
     ) external override {
         OwnableStorage.onlyOwner();
@@ -294,7 +294,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         returns (
             uint256 maxLiquidationLimitAccumulationMultiplier,
             uint256 maxSecondsInLiquidationWindow,
-            uint256 maxLiquidationPd,
+            BaseQuantoPerUSDUint256 maxLiquidationPd,
             address endorsedLiquidator
         )
     {
