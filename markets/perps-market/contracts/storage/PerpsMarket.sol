@@ -281,8 +281,8 @@ library PerpsMarket {
             MarketUpdate.Data(
                 self.id,
                 interestRate,
-                self.skew.unwrap(),
-                self.size.unwrap(),
+                self.skew,
+                self.size,
                 self.lastFundingRate,
                 currentFundingVelocity(self)
             );
