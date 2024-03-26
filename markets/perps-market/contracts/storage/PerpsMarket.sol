@@ -406,7 +406,7 @@ library PerpsMarket {
 
             // same check but with value (size * price)
             // note that if maxValue param is set to 0, this validation is skipped
-            if (maxValue.greaterThanZero() && maxValue.unwrap() < MathUtil.abs(newSideSize.unwrap() / 2).mulDecimal(price.unwrap())) {
+            if (maxValue.greaterThanZero() && maxValue < newSideSize.div(2).abs().mulDecimalToQuanto(price)) {
                 revert PerpsMarketConfiguration.MaxUSDOpenInterestReached(
                     self.id,
                     maxValue,
