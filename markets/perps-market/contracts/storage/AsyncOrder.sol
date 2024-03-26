@@ -617,7 +617,7 @@ library AsyncOrder {
         USDPerBaseUint256 fillPrice
     ) internal view returns (bool exceeded) {
         return
-            (order.request.sizeDelta.unwrap() > 0 && fillPrice > order.request.acceptablePrice) ||
-            (order.request.sizeDelta.unwrap() < 0 && fillPrice < order.request.acceptablePrice);
+            (order.request.sizeDelta.greaterThanZero() && fillPrice > order.request.acceptablePrice) ||
+            (order.request.sizeDelta.lessThanZero() && fillPrice < order.request.acceptablePrice);
     }
 }
