@@ -372,7 +372,6 @@ library PerpsAccount {
         return (initialMargin, maintenanceMargin, possibleLiquidationReward);
     }
 
-    /// @dev Returns USD
     function getKeeperRewardsAndCosts(
         Data storage self,
         uint128 skipMarketId
