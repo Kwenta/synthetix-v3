@@ -109,7 +109,7 @@ library PerpsMarketConfiguration {
         Data storage self,
         BaseQuantoPerUSDUint256 positionSize
     ) internal view returns (uint256) {
-        return MathUtil.ceilDivide(positionSize.unwrap(), maxLiquidationAmountInWindow(self).unwrap());
+        return positionSize.ceilDivide(maxLiquidationAmountInWindow(self));
     }
 
     function calculateFlagReward(
@@ -133,7 +133,7 @@ library PerpsMarketConfiguration {
             QuantoUint256 maintenanceMargin
         )
     {
-        if (size.unwrap() == 0) {
+        if (size.isZero()) {
             return (0, 0, InteractionsQuantoUint256.zero(), InteractionsQuantoUint256.zero());
         }
         BaseQuantoPerUSDUint256 sizeAbs = size.abs();
