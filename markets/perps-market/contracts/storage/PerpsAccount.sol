@@ -567,19 +567,19 @@ library PerpsAccount {
         oldPositionAbsSize = oldPositionSize.abs128();
         amountToLiquidate = perpsMarket.maxLiquidatableAmount(oldPositionAbsSize);
 
-        if (amountToLiquidate.unwrap() == 0) {
+        if (amountToLiquidate.isZero()) {
             return (InteractionsBaseQuantoPerUSDUint128.zero(), oldPositionSize, InteractionsBaseQuantoPerUSDInt128.zero(), oldPositionAbsSize, marketUpdateData);
         }
 
         BaseQuantoPerUSDInt128 amtToLiquidationInt = amountToLiquidate.toInt();
         // reduce position size
-        newPositionSize = oldPositionSize.unwrap() > 0
+        newPositionSize = oldPositionSize.greaterThanZero()
             ? oldPositionSize - amtToLiquidationInt
             : oldPositionSize + amtToLiquidationInt;
 
         // create new position in case of partial liquidation
         Position.Data memory newPosition;
-        if (newPositionSize.unwrap() != 0) {
+        if (!newPositionSize.isZero()) {
             newPosition = Position.Data({
                 marketId: marketId,
                 latestInteractionPrice: price.to128(),
