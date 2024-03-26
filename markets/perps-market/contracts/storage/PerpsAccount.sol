@@ -250,7 +250,7 @@ library PerpsAccount {
         Data storage self,
         PerpsPrice.Tolerance stalenessTolerance
     ) internal view returns (USDUint256) {
-        uint256 totalCollateralValue;
+        USDUint256 totalCollateralValue;
         ISpotMarketSystem spotMarket = PerpsMarketFactory.load().spotMarket;
         for (uint256 i = 1; i <= self.activeCollateralTypes.length(); i++) {
             uint128 synthMarketId = self.activeCollateralTypes.valueAt(i).to128();
@@ -266,9 +266,9 @@ library PerpsAccount {
                     Price.Tolerance(uint256(stalenessTolerance)) // solhint-disable-line numcast/safe-cast
                 );
             }
-            totalCollateralValue += amountToAdd;
+            totalCollateralValue = totalCollateralValue + USDUint256.wrap(amountToAdd);
         }
-        return USDUint256.wrap(totalCollateralValue);
+        return totalCollateralValue;
     }
 
     function getAccountPnl(
