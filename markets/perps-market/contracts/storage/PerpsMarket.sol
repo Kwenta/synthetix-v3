@@ -13,7 +13,7 @@ import {PerpsPrice} from "./PerpsPrice.sol";
 import {Liquidation} from "./Liquidation.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
 import {InterestRate} from "./InterestRate.sol";
-import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint128, USDPerBaseUint256, USDPerBaseInt256, USDPerQuantoUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, USDInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDPerBaseUint256, InteractionsQuantoInt256, InteractionsUSDPerQuantoUint256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint128, USDPerBaseUint256, USDPerBaseInt256, USDPerBaseUint128, USDPerQuantoUint256, QuantoInt256, BaseQuantoPerUSDUint256, QuantoUint256, BaseQuantoPerUSDInt128, USDUint256, USDInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsQuantoUint256, InteractionsBaseQuantoPerUSDInt256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDPerBaseUint256, InteractionsQuantoInt256, InteractionsUSDPerQuantoUint256, InteractionsUSDPerBaseInt256, InteractionsUSDPerBaseUint128} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Data for a single perps market
@@ -30,6 +30,7 @@ library PerpsMarket {
     using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
     using InteractionsUSDPerBaseUint256 for USDPerBaseUint256;
+    using InteractionsUSDPerBaseUint128 for USDPerBaseUint128;
     using InteractionsUSDPerBaseInt256 for USDPerBaseInt256;
     using InteractionsQuantoUint256 for QuantoUint256;
     using InteractionsQuantoInt256 for QuantoInt256;
@@ -252,7 +253,7 @@ library PerpsMarket {
             oldPosition.size.abs();
         self.skew = self.skew + newPosition.size.to256() - oldPosition.size.to256();
 
-        runtime.currentPrice = USDPerBaseUint256.wrap(newPosition.latestInteractionPrice.unwrap().to256());
+        runtime.currentPrice = newPosition.latestInteractionPrice.to256();
         (, QuantoInt256 pricePnl, , QuantoInt256 fundingPnl, , ) = oldPosition.getPnl(runtime.currentPrice);
 
         runtime.sizeDelta = (newPosition.size - oldPosition.size).to256();
