@@ -6,6 +6,7 @@ import {AccountRBAC} from "@synthetixio/main/contracts/storage/AccountRBAC.sol";
 import {DecimalMath} from "@synthetixio/core-contracts/contracts/utils/DecimalMath.sol";
 import {SafeCastI128, SafeCastI256, SafeCastU128, SafeCastU256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
 import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFlag.sol";
+import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
 import {IOrderModule} from "../interfaces/IOrderModule.sol";
 import {ISettlementHook} from "../interfaces/hooks/ISettlementHook.sol";
 import {Margin} from "../storage/Margin.sol";
@@ -18,8 +19,6 @@ import {ErrorUtil} from "../utils/ErrorUtil.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {PythUtil} from "../utils/PythUtil.sol";
 import {Flags} from "../utils/Flags.sol";
-
-/* solhint-disable meta-transactions/no-msg-sender */
 
 contract OrderModule is IOrderModule {
     using DecimalMath for int256;
@@ -41,18 +40,16 @@ contract OrderModule is IOrderModule {
         uint256 pythPrice;
         int256 accruedFunding;
         uint256 fillPrice;
-        uint128 accountDebt;
         uint128 updatedMarketSize;
         int128 updatedMarketSkew;
+        uint128 totalFees;
         Position.ValidatedTrade trade;
         Position.TradeParams params;
     }
 
     // --- Helpers --- //
 
-    /**
-     * @dev Reverts when `fillPrice > limitPrice` when long or `fillPrice < limitPrice` when short.
-     */
+    /// @dev Reverts when `fillPrice > limitPrice` when long or `fillPrice < limitPrice` when short.
     function isPriceToleranceExceeded(
         int128 sizeDelta,
         uint256 fillPrice,
@@ -77,9 +74,7 @@ contract OrderModule is IOrderModule {
         isReady = timestamp - commitmentTime >= globalConfig.minOrderAge;
     }
 
-    /**
-     * @dev Validates that an order can only be settled if time and price are acceptable.
-     */
+    /// @dev Validates that an order can only be settled if time and price are acceptable.
     function validateOrderPriceReadiness(
         PerpMarketConfiguration.GlobalData storage globalConfig,
         uint256 commitmentTime,
@@ -104,9 +99,7 @@ contract OrderModule is IOrderModule {
         }
     }
 
-    /**
-     * @dev Validates that the hooks specified during commitment are valid and acceptable.
-     */
+    /// @dev Validates that the hooks specified during commitment are valid and acceptable.
     function validateOrderHooks(address[] memory hooks) private view {
         uint256 length = hooks.length;
 
@@ -130,9 +123,7 @@ contract OrderModule is IOrderModule {
         }
     }
 
-    /**
-     * @dev Executes the hooks supplied in the order commitment.
-     */
+    /// @dev Executes the hooks supplied in the order commitment.
     function executeOrderHooks(
         uint128 accountId,
         uint128 marketId,
@@ -163,17 +154,13 @@ contract OrderModule is IOrderModule {
         }
     }
 
-    /**
-     * @dev Generic helper for funding recomputation during order management.
-     */
+    /// @dev Generic helper for funding recomputation during order management.
     function recomputeUtilization(PerpMarket.Data storage market, uint256 price) private {
         (uint256 utilizationRate, ) = market.recomputeUtilization(price);
         emit UtilizationRecomputed(market.id, market.skew, utilizationRate);
     }
 
-    /**
-     * @dev Generic helper for funding recomputation during order management.
-     */
+    /// @dev Generic helper for funding recomputation during order management.
     function recomputeFunding(PerpMarket.Data storage market, uint256 price) private {
         (int256 fundingRate, ) = market.recomputeFunding(price);
         emit FundingRecomputed(
@@ -186,9 +173,7 @@ contract OrderModule is IOrderModule {
 
     // --- Mutations --- //
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function commitOrder(
         uint128 accountId,
         uint128 marketId,
@@ -248,9 +233,7 @@ contract OrderModule is IOrderModule {
         );
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function settleOrder(
         uint128 accountId,
         uint128 marketId,
@@ -329,9 +312,14 @@ contract OrderModule is IOrderModule {
 
         market.updateDebtCorrection(position, runtime.trade.newPosition);
 
+        // Account debt and market total trader debt must be updated with fees incurred to settle.
+        Margin.Data storage accountMargin = Margin.load(accountId, marketId);
+        runtime.totalFees = (runtime.trade.orderFee + runtime.trade.keeperFee).to128();
+        accountMargin.debtUsd += runtime.totalFees;
+        market.totalTraderDebtUsd += runtime.totalFees;
+
         // Update collateral used for margin if necessary. We only perform this if modifying an existing position.
         if (position.size != 0) {
-            Margin.Data storage accountMargin = Margin.load(accountId, marketId);
             accountMargin.updateAccountDebtAndCollateral(
                 market,
                 // What is `newMarginUsd`?
@@ -344,8 +332,6 @@ contract OrderModule is IOrderModule {
                 runtime.trade.newMarginUsd.toInt() -
                     runtime.trade.marginValues.collateralUsd.toInt()
             );
-
-            runtime.accountDebt = accountMargin.debtUsd;
         }
 
         if (runtime.trade.newPosition.size == 0) {
@@ -356,7 +342,11 @@ contract OrderModule is IOrderModule {
 
         // Keeper fees can be set to zero.
         if (runtime.trade.keeperFee > 0) {
-            globalConfig.synthetix.withdrawMarketUsd(marketId, msg.sender, runtime.trade.keeperFee);
+            globalConfig.synthetix.withdrawMarketUsd(
+                marketId,
+                ERC2771Context._msgSender(),
+                runtime.trade.keeperFee
+            );
         }
 
         emit OrderSettled(
@@ -370,7 +360,7 @@ contract OrderModule is IOrderModule {
             healthData.accruedUtilization,
             healthData.pnl,
             runtime.fillPrice,
-            runtime.accountDebt
+            accountMargin.debtUsd
         );
 
         emit MarketSizeUpdated(marketId, runtime.updatedMarketSize, runtime.updatedMarketSkew);
@@ -384,9 +374,7 @@ contract OrderModule is IOrderModule {
         executeOrderHooks(accountId, marketId, hooks, runtime.pythPrice);
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function cancelStaleOrder(uint128 accountId, uint128 marketId) external {
         FeatureFlag.ensureAccessToFeature(Flags.CANCEL_ORDER);
         PerpMarket.Data storage market = PerpMarket.exists(marketId);
@@ -407,9 +395,7 @@ contract OrderModule is IOrderModule {
         delete market.orders[accountId];
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function cancelOrder(
         uint128 accountId,
         uint128 marketId,
@@ -464,7 +450,7 @@ contract OrderModule is IOrderModule {
         }
 
         // If `isAccountOwner` then 0 else chargeFee.
-        uint256 keeperFee = msg.sender == account.rbac.owner
+        uint256 keeperFee = ERC2771Context._msgSender() == account.rbac.owner
             ? 0
             : Order.getSettlementKeeperFee(order.keeperFeeBufferUsd);
 
@@ -473,7 +459,11 @@ contract OrderModule is IOrderModule {
                 market,
                 -keeperFee.toInt()
             );
-            globalConfig.synthetix.withdrawMarketUsd(marketId, msg.sender, keeperFee);
+            globalConfig.synthetix.withdrawMarketUsd(
+                marketId,
+                ERC2771Context._msgSender(),
+                keeperFee
+            );
         }
 
         emit OrderCanceled(accountId, marketId, keeperFee, commitmentTime);
@@ -482,9 +472,7 @@ contract OrderModule is IOrderModule {
 
     // --- Views --- //
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function getOrderDigest(
         uint128 accountId,
         uint128 marketId
@@ -516,9 +504,7 @@ contract OrderModule is IOrderModule {
             );
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function getOrderFees(
         uint128 marketId,
         int128 sizeDelta,
@@ -542,9 +528,7 @@ contract OrderModule is IOrderModule {
         keeperFee = Order.getSettlementKeeperFee(keeperFeeBufferUsd);
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function getFillPrice(uint128 marketId, int128 size) external view returns (uint256) {
         PerpMarket.Data storage market = PerpMarket.exists(marketId);
         return
@@ -556,9 +540,7 @@ contract OrderModule is IOrderModule {
             );
     }
 
-    /**
-     * @inheritdoc IOrderModule
-     */
+    /// @inheritdoc IOrderModule
     function getOraclePrice(uint128 marketId) external view returns (uint256) {
         return PerpMarket.exists(marketId).getOraclePrice();
     }

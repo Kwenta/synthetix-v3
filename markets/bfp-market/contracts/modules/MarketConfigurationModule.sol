@@ -2,18 +2,15 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {OwnableStorage} from "@synthetixio/core-contracts/contracts/ownership/OwnableStorage.sol";
+import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
 import {IMarketConfigurationModule} from "../interfaces/IMarketConfigurationModule.sol";
 import {PerpMarket} from "../storage/PerpMarket.sol";
 import {PerpMarketConfiguration} from "../storage/PerpMarketConfiguration.sol";
 
-/* solhint-disable meta-transactions/no-msg-sender */
-
 contract MarketConfigurationModule is IMarketConfigurationModule {
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
+    /// @inheritdoc IMarketConfigurationModule
     function setMarketConfiguration(
-        IMarketConfigurationModule.ConfigureParameters memory data
+        IMarketConfigurationModule.GlobalMarketConfigureParameters memory data
     ) external {
         OwnableStorage.onlyOwner();
 
@@ -41,12 +38,10 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         config.lowUtilizationSlopePercent = data.lowUtilizationSlopePercent;
         config.highUtilizationSlopePercent = data.highUtilizationSlopePercent;
 
-        emit ConfigurationUpdated(msg.sender);
+        emit GlobalMarketConfigured(ERC2771Context._msgSender());
     }
 
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
+    /// @inheritdoc IMarketConfigurationModule
     function setMarketConfigurationById(
         uint128 marketId,
         IMarketConfigurationModule.ConfigureByMarketParameters memory data
@@ -71,19 +66,18 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         config.minMarginRatio = data.minMarginRatio;
         config.incrementalMarginScalar = data.incrementalMarginScalar;
         config.maintenanceMarginScalar = data.maintenanceMarginScalar;
+        config.maxInitialMarginRatio = data.maxInitialMarginRatio;
         config.liquidationRewardPercent = data.liquidationRewardPercent;
         config.liquidationLimitScalar = data.liquidationLimitScalar;
         config.liquidationWindowDuration = data.liquidationWindowDuration;
         config.liquidationMaxPd = data.liquidationMaxPd;
 
-        emit MarketConfigurationUpdated(marketId, msg.sender);
+        emit MarketConfigured(marketId, ERC2771Context._msgSender());
     }
 
     // --- Views --- //
 
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
+    /// @inheritdoc IMarketConfigurationModule
     function getMarketConfiguration()
         external
         pure
@@ -92,9 +86,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         return PerpMarketConfiguration.load();
     }
 
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
+    /// @inheritdoc IMarketConfigurationModule
     function getMarketConfigurationById(
         uint128 marketId
     ) external pure returns (PerpMarketConfiguration.Data memory) {

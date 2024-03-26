@@ -42,6 +42,7 @@ import {
   calcLiquidationKeeperFee,
   calcTransactionCostInUsd,
 } from '../../calculations';
+import { PerpMarketConfiguration } from '../../generated/typechain/MarketConfigurationModule';
 
 describe('LiquidationModule', () => {
   const bs = bootstrap(genBootstrap());
@@ -364,88 +365,6 @@ describe('LiquidationModule', () => {
       assertBn.equal(
         await USD.balanceOf(await flagKeeper.getAddress()),
         flagEvent.args.flagKeeperReward
-      );
-    });
-
-    it("should update the position's accrued fees", async () => {
-      const { PerpMarketProxy } = systems();
-
-      const orderSide = genSide();
-      const { trader, market, marketId, collateral, collateralDepositAmount } = await depositMargin(
-        bs,
-        genTrader(bs)
-      );
-      const order1 = await genOrder(bs, market, collateral, collateralDepositAmount, {
-        desiredLeverage: 10,
-        desiredSide: orderSide,
-      });
-      await commitAndSettle(bs, marketId, trader, order1);
-
-      // Commit a new order but don't settle.
-      const order2 = await genOrder(bs, market, collateral, collateralDepositAmount, {
-        desiredLeverage: 0.5,
-        desiredSide: orderSide,
-      });
-      await commitOrder(bs, marketId, trader, order2);
-
-      // Price moves 10% and results in a healthFactor of < 1.
-      const newMarketOraclePrice = wei(order2.oraclePrice)
-        .mul(orderSide === 1 ? 0.9 : 1.1)
-        .toBN();
-      await market.aggregator().mockSetCurrentPrice(newMarketOraclePrice);
-      const flagKeeper = keeper2();
-      const posBefore = await PerpMarketProxy.getPositionDigest(trader.accountId, marketId);
-      const { receipt } = await withExplicitEvmMine(
-        () => PerpMarketProxy.connect(flagKeeper).flagPosition(trader.accountId, marketId),
-        provider()
-      );
-      const flagEvent = findEventSafe(receipt, 'PositionFlaggedLiquidation', PerpMarketProxy);
-      const posAfter = await PerpMarketProxy.getPositionDigest(trader.accountId, marketId);
-
-      assertBn.equal(
-        posAfter.accruedFeesUsd,
-        posBefore.accruedFeesUsd.add(flagEvent.args.flagKeeperReward)
-      );
-    });
-
-    it('should update reported debt (debtCorrection)', async () => {
-      const { PerpMarketProxy } = systems();
-
-      const orderSide = genSide();
-      const { trader, market, marketId, collateral, collateralDepositAmount } = await depositMargin(
-        bs,
-        genTrader(bs)
-      );
-      const order1 = await genOrder(bs, market, collateral, collateralDepositAmount, {
-        desiredLeverage: 10,
-        desiredSide: orderSide,
-      });
-      await commitAndSettle(bs, marketId, trader, order1);
-
-      // Commit a new order but don't settle.
-      const order2 = await genOrder(bs, market, collateral, collateralDepositAmount, {
-        desiredLeverage: 0.5,
-        desiredSide: orderSide,
-      });
-      await commitOrder(bs, marketId, trader, order2);
-
-      // Price moves 10% and results in a healthFactor of < 1.
-      const newMarketOraclePrice = wei(order2.oraclePrice)
-        .mul(orderSide === 1 ? 0.9 : 1.1)
-        .toBN();
-      await market.aggregator().mockSetCurrentPrice(newMarketOraclePrice);
-      const flagKeeper = keeper2();
-      const marketBefore = await PerpMarketProxy.getMarketDigest(marketId);
-      const { receipt } = await withExplicitEvmMine(
-        () => PerpMarketProxy.connect(flagKeeper).flagPosition(trader.accountId, marketId),
-        provider()
-      );
-      const flagEvent = findEventSafe(receipt, 'PositionFlaggedLiquidation', PerpMarketProxy);
-      const marketAfter = await PerpMarketProxy.getMarketDigest(marketId);
-
-      assertBn.lt(
-        marketBefore.debtCorrection,
-        marketAfter.debtCorrection.sub(flagEvent.args.flagKeeperReward)
       );
     });
 
@@ -2534,6 +2453,19 @@ describe('LiquidationModule', () => {
   });
 
   describe('getLiquidationMarginUsd', () => {
+    const calcImrAndMmr = (size: Wei, marketConfig: PerpMarketConfiguration.DataStructOutput) => {
+      const imr = Wei.min(
+        size
+          .abs()
+          .div(marketConfig.skewScale)
+          .mul(marketConfig.incrementalMarginScalar)
+          .add(marketConfig.minMarginRatio),
+        wei(marketConfig.maxInitialMarginRatio)
+      );
+      const mmr = imr.mul(marketConfig.maintenanceMarginScalar);
+      return { imr, mmr };
+    };
+
     it('should revert when invalid marketId', async () => {
       const { PerpMarketProxy } = systems();
       const invalidMarketId = 42069;
@@ -2616,11 +2548,7 @@ describe('LiquidationModule', () => {
         wei(maxLiquidatableCapacity),
         globalConfig
       );
-      const imr = absSize
-        .div(marketConfig.skewScale)
-        .mul(marketConfig.incrementalMarginScalar)
-        .add(marketConfig.minMarginRatio);
-      const mmr = imr.mul(marketConfig.maintenanceMarginScalar);
+      const { imr, mmr } = calcImrAndMmr(absSize, marketConfig);
 
       const expectedIm = notional.mul(imr).add(marketConfig.minMarginUsd);
       const expectedMm = notional
@@ -2673,11 +2601,7 @@ describe('LiquidationModule', () => {
         wei(maxLiquidatableCapacity),
         globalConfig
       );
-      const imr = absSize
-        .div(marketConfig.skewScale)
-        .mul(marketConfig.incrementalMarginScalar)
-        .add(marketConfig.minMarginRatio);
-      const mmr = imr.mul(marketConfig.maintenanceMarginScalar);
+      const { imr, mmr } = calcImrAndMmr(absSize, marketConfig);
 
       const expectedIm = notional.mul(imr).add(marketConfig.minMarginUsd);
       const expectedMm = notional
@@ -2739,11 +2663,7 @@ describe('LiquidationModule', () => {
         wei(maxLiquidatableCapacity),
         globalConfig
       );
-      const imr = absSize
-        .div(marketConfig.skewScale)
-        .mul(marketConfig.incrementalMarginScalar)
-        .add(marketConfig.minMarginRatio);
-      const mmr = imr.mul(marketConfig.maintenanceMarginScalar);
+      const { imr, mmr } = calcImrAndMmr(absSize, marketConfig);
 
       const expectedIm = notional.mul(imr).add(marketConfig.minMarginUsd);
       const expectedMm = notional
@@ -2754,6 +2674,80 @@ describe('LiquidationModule', () => {
 
       assertBn.near(im, expectedIm.toBN(), bn(0.000001));
       assertBn.near(mm, expectedMm.toBN(), bn(0.000001));
+    });
+
+    it('should cap IMR (and hence IM) by the maxInitialMarginRatio (concrete)', async () => {
+      const { PerpMarketProxy } = systems();
+
+      const collateral = genOneOf(collateralsWithoutSusd());
+      await collateral.setPrice(bn(50_000));
+
+      const { market, marketId, trader, marginUsdDepositAmount } = await depositMargin(
+        bs,
+        genTrader(bs, {
+          desiredMarginUsdDepositAmount: 3_000_000_000, // 3b position
+          desiredCollateral: collateral,
+        })
+      );
+
+      const { answer: marketPrice } = await market.aggregator().latestRoundData();
+
+      const desiredSizeDelta = wei(marginUsdDepositAmount).div(wei(marketPrice)).neg().toBN(); // 1x short
+      const { im } = await PerpMarketProxy.getLiquidationMarginUsd(
+        trader.accountId,
+        marketId,
+        desiredSizeDelta
+      );
+
+      const size = wei(desiredSizeDelta).abs();
+      const notional = size.mul(marketPrice);
+      const marketConfig = await PerpMarketProxy.getMarketConfigurationById(marketId);
+
+      // Expect the IMR to be at maxInitialMarginRatio cap.
+      const imr = wei(marketConfig.maxInitialMarginRatio);
+      const expectedIm = notional.mul(imr).add(wei(marketConfig.minMarginUsd));
+
+      assertBn.equal(im, expectedIm.toBN());
+    });
+
+    it('should allow a position to always 1x even when extremely large', async () => {
+      const { PerpMarketProxy } = systems();
+
+      const market = genOneOf(markets());
+      const marketId = market.marketId();
+      const { answer: marketPrice } = await market.aggregator().latestRoundData();
+
+      const trader = genOneOf(traders());
+
+      // 1M per token to avoid exceeding maxAllowable.
+      const collateral = genOneOf(collateralsWithoutSusd());
+      await collateral.setPrice(bn(1_000_000));
+
+      let accumulatedDepositUsd = wei(0);
+
+      for (let i = 0; i < 10; i++) {
+        const desiredMarginUsdDepositAmount = genNumber(420_000_000, 690_000_000);
+        const { marginUsdDepositAmount } = await depositMargin(
+          bs,
+          genTrader(bs, {
+            desiredMarginUsdDepositAmount,
+            desiredCollateral: collateral,
+            desiredMarket: market,
+            desiredTrader: trader,
+          })
+        );
+        accumulatedDepositUsd = accumulatedDepositUsd.add(marginUsdDepositAmount);
+
+        const desiredSizeDelta = wei(accumulatedDepositUsd).div(wei(marketPrice)).neg().toBN(); // 1x short
+        const { im } = await PerpMarketProxy.getLiquidationMarginUsd(
+          trader.accountId,
+          marketId,
+          desiredSizeDelta
+        );
+
+        // Expect the IM to always be below the total deposited margin.
+        assertBn.lt(im, accumulatedDepositUsd.toBN());
+      }
     });
   });
 });

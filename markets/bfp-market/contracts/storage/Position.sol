@@ -3,14 +3,13 @@ pragma solidity >=0.8.11 <0.9.0;
 
 import {DecimalMath} from "@synthetixio/core-contracts/contracts/utils/DecimalMath.sol";
 import {SafeCastI256, SafeCastU256, SafeCastU128, SafeCastI128} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
+import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
 import {Order} from "./Order.sol";
 import {PerpMarket} from "./PerpMarket.sol";
 import {PerpMarketConfiguration} from "./PerpMarketConfiguration.sol";
 import {Margin} from "./Margin.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {ErrorUtil} from "../utils/ErrorUtil.sol";
-
-/* solhint-disable meta-transactions/no-msg-sender */
 
 library Position {
     using DecimalMath for uint256;
@@ -63,16 +62,16 @@ library Position {
     // --- Storage --- //
 
     struct Data {
-        // Size (in native units e.g. swstETH)
+        /// Size (in native units e.g. swstETH)
         int128 size;
-        // The market's accumulated accrued funding at position settlement.
+        /// Block timestamp when position was opened or modified.
+        uint256 entryTime;
+        /// The market's accumulated accrued funding at position settlement.
         int256 entryFundingAccrued;
-        // The market's accumulated accrued utilization at position settlement.
+        /// The market's accumulated accrued utilization at position settlement.
         uint256 entryUtilizationAccrued;
-        // The fill price at which this position was settled with.
+        /// The fill price at which this position was settled with.
         uint256 entryPrice;
-        // Accrued static fees in USD incurred to manage this position (e.g. keeper + order + liqRewards + xyz).
-        uint256 accruedFeesUsd;
     }
 
     /**
@@ -199,9 +198,7 @@ library Position {
         }
     }
 
-    /**
-     * @dev Validates whether the given `TradeParams` would lead to a valid next position.
-     */
+    /// @dev Validates whether the given `TradeParams` would lead to a valid next position.
     function validateTrade(
         uint128 accountId,
         PerpMarket.Data storage market,
@@ -257,11 +254,11 @@ library Position {
         uint256 keeperFee = Order.getSettlementKeeperFee(params.keeperFeeBufferUsd);
         Position.Data memory newPosition = Position.Data(
             currentPosition.size + params.sizeDelta,
+            block.timestamp,
             market.currentFundingAccruedComputed,
             // Since utilization wont be recomputed here we need to manually add the unrecorded utilization.
             market.currentUtilizationAccruedComputed + market.getUnrecordedUtilization(),
-            params.fillPrice,
-            orderFee + keeperFee
+            params.fillPrice
         );
 
         // Minimum position margin checks. If a position is decreasing (i.e. derisking by lowering size), we
@@ -312,9 +309,7 @@ library Position {
             );
     }
 
-    /**
-     * @dev Validates whether the position at `accountId` and `marketId` would pass liquidation.
-     */
+    /// @dev Validates whether the position at `accountId` and `marketId` would pass liquidation.
     function validateLiquidation(
         uint128 accountId,
         PerpMarket.Data storage market,
@@ -353,7 +348,8 @@ library Position {
         ) = market.getRemainingLiquidatableSizeCapacity(marketConfig);
 
         if (
-            msg.sender == globalConfig.keeperLiquidationEndorsed && runtime.remainingCapacity == 0
+            ERC2771Context._msgSender() == globalConfig.keeperLiquidationEndorsed &&
+            runtime.remainingCapacity == 0
         ) {
             runtime.remainingCapacity = runtime.oldPositionSizeAbs;
         }
@@ -388,18 +384,14 @@ library Position {
             oldPosition.size > 0
                 ? oldPosition.size - liqSize.toInt()
                 : oldPosition.size + liqSize.toInt(),
+            block.timestamp,
             oldPosition.entryFundingAccrued,
             oldPosition.entryUtilizationAccrued,
-            oldPosition.entryPrice,
-            // An accumulation of fees paid on liquidation paid out to the liquidator.
-            oldPosition.accruedFeesUsd + liqKeeperFee
+            oldPosition.entryPrice
         );
     }
 
-    /**
-     * @dev Returns the reward for flagging a position given a certian position size | collateral , "flagKeeperReward"
-     * Note notionalValueUsd  = posSize.abs() * price
-     */
+    /// @dev Returns reward for flagging position, notionalValueUsd is `size * price`.
     function getLiquidationFlagReward(
         uint256 notionalValueUsd,
         uint256 collateralUsd,
@@ -457,9 +449,12 @@ library Position {
         uint128 absSize = MathUtil.abs(size).to128();
         uint256 notional = absSize.mulDecimal(price);
 
-        uint256 imr = absSize.divDecimal(marketConfig.skewScale).mulDecimal(
-            marketConfig.incrementalMarginScalar
-        ) + marketConfig.minMarginRatio;
+        uint256 imr = MathUtil.min(
+            absSize.divDecimal(marketConfig.skewScale).mulDecimal(
+                marketConfig.incrementalMarginScalar
+            ) + marketConfig.minMarginRatio,
+            marketConfig.maxInitialMarginRatio
+        );
         uint256 mmr = imr.mulDecimal(marketConfig.maintenanceMarginScalar);
 
         liqFlagReward = getLiquidationFlagReward(
@@ -477,9 +472,7 @@ library Position {
             getLiquidationKeeperFee(absSize, marketConfig, globalConfig);
     }
 
-    /**
-     * @dev Returns the number of partial liquidations required given liquidation size and max liquidation capacity.
-     */
+    /// @dev Returns the number of partial liquidations required given liquidation size and max liquidation capacity.
     function getLiquidationIterations(
         uint256 liqSize,
         uint256 maxLiqCapacity
@@ -494,11 +487,7 @@ library Position {
         return remainder == 0 ? quotient : quotient + 1;
     }
 
-    /**
-     * @dev Returns the fee in USD paid to keeper for performing the liquidation (not flagging).
-     *
-     * The size here is either liqSize or position.size.abs()
-     */
+    /// @dev Returns fee paid to keeper for performing the liquidation (not flagging), size is liqSize or pos.size.abs
     function getLiquidationKeeperFee(
         uint128 size,
         PerpMarketConfiguration.Data storage marketConfig,
@@ -531,9 +520,7 @@ library Position {
         return MathUtil.min(liquidationFeeInUsd * iterations, globalConfig.maxKeeperFeeUsd);
     }
 
-    /**
-     * @dev Returns the health data given the `marketId`, `config`, and position{...} details.
-     */
+    /// @dev Returns the health data given the `marketId`, `config`, and position{...} details.
     function getHealthData(
         PerpMarket.Data storage market,
         int128 size,
@@ -560,7 +547,7 @@ library Position {
                 positionEntryUtilizationAccrued
         );
 
-        // Calculate this position's PnL.
+        // Calc the price PnL.
         healthData.pnl = size.mulDecimal(price.toInt() - positionEntryPrice.toInt());
 
         // `margin / mm <= 1` means liquidation.
@@ -577,9 +564,7 @@ library Position {
 
     // --- Member (views) --- //
 
-    /**
-     * @dev Returns whether the current position can be liquidated.
-     */
+    /// @dev Returns whether the current position can be liquidated.
     function isLiquidatable(
         Position.Data storage self,
         PerpMarket.Data storage market,
@@ -603,9 +588,7 @@ library Position {
         return healthData.healthFactor <= DecimalMath.UNIT;
     }
 
-    /**
-     * @dev Returns the notional profit or loss based on current price and entry price.
-     */
+    /// @dev Returns the notional profit or loss based on current price and entry price.
     function getPricePnl(Position.Data storage self, uint256 price) internal view returns (int256) {
         if (self.size == 0) {
             return 0;
@@ -613,9 +596,7 @@ library Position {
         return self.size.mulDecimal(price.toInt() - self.entryPrice.toInt());
     }
 
-    /**
-     * @dev Returns the funding accrued from when the position was opened to now.
-     */
+    /// @dev Returns the funding accrued from when the position was opened to now.
     function getAccruedFunding(
         Position.Data storage self,
         PerpMarket.Data storage market,
@@ -633,9 +614,7 @@ library Position {
             );
     }
 
-    /**
-     * @dev Returns the utilization accrued from when the position was opened to now.
-     */
+    /// @dev Returns the utilization accrued from when the position was opened to now.
     function getAccruedUtilization(
         Position.Data storage self,
         PerpMarket.Data storage market,
@@ -657,14 +636,12 @@ library Position {
 
     // --- Member (mutations) --- //
 
-    /**
-     * @dev Clears the current position struct in-place of any stored data.
-     */
+    /// @dev Clears the current position struct in-place of any stored data.
     function update(Position.Data storage self, Position.Data memory data) internal {
         self.size = data.size;
+        self.entryTime = data.entryTime;
         self.entryFundingAccrued = data.entryFundingAccrued;
         self.entryUtilizationAccrued = data.entryUtilizationAccrued;
         self.entryPrice = data.entryPrice;
-        self.accruedFeesUsd = data.accruedFeesUsd;
     }
 }

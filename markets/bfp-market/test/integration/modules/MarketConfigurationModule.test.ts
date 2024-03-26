@@ -48,7 +48,7 @@ describe('MarketConfigurationModule', async () => {
 
       await assertEvent(
         receipt,
-        `ConfigurationUpdated("${await from.getAddress()}")`,
+        `GlobalMarketConfigured("${await from.getAddress()}")`,
         PerpMarketProxy
       );
     });
@@ -96,13 +96,14 @@ describe('MarketConfigurationModule', async () => {
       assertBn.equal(specific.minMarginRatio, config.minMarginRatio);
       assertBn.equal(specific.incrementalMarginScalar, config.incrementalMarginScalar);
       assertBn.equal(specific.maintenanceMarginScalar, config.maintenanceMarginScalar);
+      assertBn.equal(specific.maxInitialMarginRatio, config.maxInitialMarginRatio);
       assertBn.equal(specific.liquidationRewardPercent, config.liquidationRewardPercent);
       assertBn.equal(specific.liquidationLimitScalar, config.liquidationLimitScalar);
       assertBn.equal(specific.liquidationWindowDuration, config.liquidationWindowDuration);
 
       await assertEvent(
         receipt,
-        `MarketConfigurationUpdated(${marketId}, "${await from.getAddress()}")`,
+        `MarketConfigured(${marketId}, "${await from.getAddress()}")`,
         PerpMarketProxy
       );
     });

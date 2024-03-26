@@ -14,6 +14,9 @@ defaultValue = "main"
 [setting.synthetixPackage]
 defaultValue = "synthetix:latest"
 
+[setting.spotMarketPreset]
+defaultValue = "main"
+
 [setting.spotMarketPackage]
 defaultValue = "synthetix-spot-market:latest"
 
@@ -25,6 +28,7 @@ preset = "<%= settings.synthetixPreset %>"
 
 [import.spotMarket]
 source = "<%= settings.spotMarketPackage %>"
+preset = "<%= settings.spotMarketPreset %>"
 
 [import.pyth]
 source = "pyth"
@@ -202,6 +206,12 @@ target = ["CollateralMockD8"]
 func = "initialize"
 args = ["CollateralMockD18", "CMD8", "8"]
 depends = ["contract.CollateralMockD8"]
+
+[contract.MergeAccountSettlementHookMock]
+artifact = "contracts/mocks/MergeAccountSettlementHookMock.sol:MergeAccountSettlementHookMock"
+args = ["<%= contracts.InitialPerpMarketProxy.address %>"]
+depends = ["contract.InitialPerpMarketProxy"]
+salt = "3"
 
 # --- Market Post BFP Deployment Configuration --- #
 

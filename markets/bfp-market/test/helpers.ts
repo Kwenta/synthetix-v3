@@ -120,6 +120,19 @@ export const depositMargin = async (bs: Bs, gTrader: GeneratedTrader) => {
   return gTrader;
 };
 
+export const withdrawAllCollateral = async (bs: Bs, trader: Trader, marketId: BigNumber) => {
+  const { systems, provider } = bs;
+  const { PerpMarketProxy } = systems();
+  const { collateralUsd } = await PerpMarketProxy.getAccountDigest(trader.accountId, marketId);
+  if (collateralUsd.gt(0)) {
+    await withExplicitEvmMine(
+      () =>
+        PerpMarketProxy.connect(trader.signer).withdrawAllCollateral(trader.accountId, marketId),
+      provider()
+    );
+  }
+};
+
 /** Generic update on market specific params. */
 export const setMarketConfigurationById = async (
   { systems, owner }: Pick<Bs, 'systems' | 'owner'>,
@@ -234,7 +247,11 @@ export const commitOrder = async (
         sizeDelta,
         limitPrice,
         keeperFeeBufferUsd,
-        hooks
+        hooks,
+        {
+          maxFeePerGas: BigNumber.from(500 * 1e9), // Specify a large maxFeePerGas so callers can set a high basefee without any problems.
+          gasLimit: BigNumber.from(1000000), // Sometimes gas estimation is not big enough, add a large one to be safe.
+        }
       ),
     provider()
   );
@@ -277,6 +294,8 @@ export const commitAndSettle = async (
         updateData,
         {
           value: updateFee,
+          maxFeePerGas: BigNumber.from(500 * 1e9), // Specify a large maxFeePerGas so callers can set a high basefee without any problems.
+          gasLimit: BigNumber.from(1000000), // Sometimes gas estimation is not big enough, add a large one to be safe.
         }
       ),
     provider()
