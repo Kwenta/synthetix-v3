@@ -241,7 +241,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         uint256 minimumInitialMarginRatioD18,
         uint256 maintenanceMarginScalarD18,
         uint256 flagRewardRatioD18,
-        uint256 minimumPositionMargin
+        QuantoUint256 minimumPositionMargin
     ) external override {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
@@ -321,7 +321,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
             uint256 minimumInitialMarginRatioD18,
             uint256 maintenanceMarginScalarD18,
             uint256 flagRewardRatioD18,
-            uint256 minimumPositionMargin
+            QuantoUint256 minimumPositionMargin
         )
     {
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);

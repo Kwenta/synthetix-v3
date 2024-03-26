@@ -19,7 +19,7 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
 import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
-import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {QuantoUint256, USDUint256, USDInt256, USDPerBaseUint256, USDPerQuantoUint256, BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDUint256, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for liquidating accounts.
@@ -37,11 +37,12 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
     using KeeperCosts for KeeperCosts.Data;
     using InteractionsBaseQuantoPerUSDUint128 for BaseQuantoPerUSDUint128;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsQuantoUint256 for QuantoUint256;
 
     /**
      * @inheritdoc ILiquidationModule
      */
-    function liquidate(uint128 accountId) external override returns (uint256 liquidationReward) {
+    function liquidate(uint128 accountId) external override returns (USDUint256 liquidationReward) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
         SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket
@@ -58,13 +59,13 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             ) = account.isEligibleForLiquidation(PerpsPrice.Tolerance.STRICT);
 
             if (isEligible) {
-                (uint256 flagCost, uint256 marginCollected) = account.flagForLiquidation();
+                (USDUint256 flagCost, USDUint256 marginCollected) = account.flagForLiquidation();
 
                 emit AccountFlaggedForLiquidation(
                     accountId,
-                    availableMargin.unwrap(),
-                    requiredMaintenaceMargin.unwrap(),
-                    expectedLiquidationReward.unwrap(),
+                    availableMargin,
+                    requiredMaintenaceMargin,
+                    expectedLiquidationReward,
                     flagCost
                 );
 
@@ -73,7 +74,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 revert NotEligibleForLiquidation(accountId);
             }
         } else {
-            liquidationReward = _liquidateAccount(account, 0, 0, false);
+            liquidationReward = _liquidateAccount(account, InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), false);
         }
     }
 
@@ -82,7 +83,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
      */
     function liquidateFlagged(
         uint256 maxNumberOfAccounts
-    ) external override returns (uint256 liquidationReward) {
+    ) external override returns (USDUint256 liquidationReward) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
         uint256[] memory liquidatableAccounts = GlobalPerpsMarket
@@ -97,7 +98,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
         for (uint256 i = 0; i < numberOfAccountsToLiquidate; i++) {
             uint128 accountId = liquidatableAccounts[i].to128();
-            liquidationReward += _liquidateAccount(PerpsAccount.load(accountId), 0, 0, false);
+            liquidationReward = liquidationReward + _liquidateAccount(PerpsAccount.load(accountId), InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), false);
         }
     }
 
@@ -106,7 +107,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
      */
     function liquidateFlaggedAccounts(
         uint128[] calldata accountIds
-    ) external override returns (uint256 liquidationReward) {
+    ) external override returns (USDUint256 liquidationReward) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
 
         SetUtil.UintSet storage liquidatableAccounts = GlobalPerpsMarket
@@ -119,7 +120,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 continue;
             }
 
-            liquidationReward += _liquidateAccount(PerpsAccount.load(accountId), 0, 0, false);
+            liquidationReward = liquidationReward + _liquidateAccount(PerpsAccount.load(accountId), InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), false);
         }
     }
 
@@ -149,8 +150,8 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         view
         override
         returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 capacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         )
     {
@@ -162,10 +163,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
 
     struct LiquidateAccountRuntime {
         uint128 accountId;
-        uint256 totalFlaggingRewards;
+        USDUint256 totalFlaggingRewards;
         BaseQuantoPerUSDUint256 totalLiquidated;
         bool accountFullyLiquidated;
-        uint256 totalLiquidationCost;
+        USDUint256 totalLiquidationCost;
         USDPerBaseUint256 price;
         uint128 positionMarketId;
         uint256 loopIterator; // stack too deep to the extreme
@@ -176,10 +177,10 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
      */
     function _liquidateAccount(
         PerpsAccount.Data storage account,
-        uint256 costOfFlagExecution,
-        uint256 totalCollateralValue,
+        USDUint256 costOfFlagExecution,
+        USDUint256 totalCollateralValue,
         bool positionFlagged
-    ) internal returns (uint256 keeperLiquidationReward) {
+    ) internal returns (USDUint256 keeperLiquidationReward) {
         LiquidateAccountRuntime memory runtime;
         runtime.accountId = account.id;
         uint256[] memory openPositionMarketIds = account.openPositionMarketIds.values();
@@ -208,13 +209,17 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
                 ERC2771Context._msgSender() !=
                 PerpsMarketConfiguration.load(runtime.positionMarketId).endorsedLiquidator
             ) {
+                USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(
+                    runtime.positionMarketId,
+                    PerpsPrice.Tolerance.DEFAULT
+                );
                 // using oldPositionAbsSize to calculate flag reward
-                runtime.totalFlaggingRewards += PerpsMarketConfiguration
+                runtime.totalFlaggingRewards = runtime.totalFlaggingRewards + PerpsMarketConfiguration
                     .load(runtime.positionMarketId)
-                    .calculateFlagReward(oldPositionAbsSize.to256().mulDecimalToQuanto(runtime.price)).unwrap();
+                    .calculateFlagReward(oldPositionAbsSize.to256().mulDecimalToQuanto(runtime.price)).mulDecimalToUSD(quantoPrice);
             }
 
-            if (amountLiquidated.unwrap() == 0) {
+            if (amountLiquidated.isZero()) {
                 continue;
             }
 
@@ -234,20 +239,20 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             emit PositionLiquidated(
                 runtime.accountId,
                 runtime.positionMarketId,
-                amountLiquidated.unwrap(),
-                newPositionSize.unwrap()
+                amountLiquidated,
+                newPositionSize
             );
         }
 
         runtime.totalLiquidationCost =
-            KeeperCosts.load().getLiquidateKeeperCosts().unwrap() +
+            KeeperCosts.load().getLiquidateKeeperCosts() +
             costOfFlagExecution;
-        if (positionFlagged || runtime.totalLiquidated.unwrap() > 0) {
+        if (positionFlagged || runtime.totalLiquidated > InteractionsBaseQuantoPerUSDUint256.zero()) {
             keeperLiquidationReward = _processLiquidationRewards(
-                USDUint256.wrap(positionFlagged ? runtime.totalFlaggingRewards : 0),
-                USDUint256.wrap(runtime.totalLiquidationCost),
-                USDUint256.wrap(totalCollateralValue)
-            ).unwrap();
+                positionFlagged ? runtime.totalFlaggingRewards : InteractionsUSDUint256.zero(),
+                runtime.totalLiquidationCost,
+                totalCollateralValue
+            );
             runtime.accountFullyLiquidated = account.openPositionMarketIds.length() == 0;
             if (runtime.accountFullyLiquidated) {
                 GlobalPerpsMarket.load().liquidatableAccounts.remove(runtime.accountId);
@@ -269,7 +274,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         USDUint256 costOfExecutionInUsd,
         USDUint256 availableMarginInUsd
     ) private returns (USDUint256 reward) {
-        if ((keeperRewards + costOfExecutionInUsd).unwrap() == 0) {
+        if ((keeperRewards + costOfExecutionInUsd).isZero()) {
             return InteractionsUSDUint256.zero();
         }
         // pay out liquidation rewards

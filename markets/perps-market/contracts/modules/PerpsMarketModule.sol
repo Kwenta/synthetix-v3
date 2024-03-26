@@ -6,7 +6,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
 import {IPerpsMarketModule} from "../interfaces/IPerpsMarketModule.sol";
-import {BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, USDPerBaseUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for getting perps market information.
@@ -28,14 +28,14 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function skew(uint128 marketId) external view override returns (int256) {
-        return PerpsMarket.load(marketId).skew.unwrap();
+    function skew(uint128 marketId) external view override returns (BaseQuantoPerUSDInt256) {
+        return PerpsMarket.load(marketId).skew;
     }
 
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function size(uint128 marketId) external view override returns (uint256) {
+    function size(uint128 marketId) external view override returns (BaseQuantoPerUSDUint256) {
         return PerpsMarket.load(marketId).size;
     }
 
@@ -63,8 +63,8 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function indexPrice(uint128 marketId) external view override returns (uint256) {
-        return PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT).unwrap();
+    function indexPrice(uint128 marketId) external view override returns (USDPerBaseUint256) {
+        return PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT);
     }
 
     /**
@@ -93,7 +93,7 @@ contract PerpsMarketModule is IPerpsMarketModule {
         PerpsMarket.Data storage market = PerpsMarket.load(marketId);
         return
             MarketSummary({
-                skew: market.skew.unwrap(),
+                skew: market.skew,
                 size: market.size,
                 maxOpenInterest: this.maxOpenInterest(marketId),
                 currentFundingRate: market.currentFundingRate(),

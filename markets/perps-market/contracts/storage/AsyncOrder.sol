@@ -12,7 +12,7 @@ import {PerpsAccount} from "./PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {OrderFee} from "./OrderFee.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerQuantoUint256, USDPerQuantoInt256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerQuantoUint256, USDPerQuantoInt256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDInt256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Async order top level data storage
@@ -35,6 +35,7 @@ library AsyncOrder {
     using InteractionsBaseQuantoPerUSDInt256 for BaseQuantoPerUSDInt256;
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
+    using InteractionsUSDPerBaseInt256 for USDPerBaseInt256;
     using InteractionsUSDUint256 for USDUint256;
     using InteractionsUSDInt256 for USDInt256;
 
@@ -178,7 +179,7 @@ library AsyncOrder {
     function checkPendingOrder(uint128 accountId) internal view returns (Data storage order) {
         order = load(accountId);
 
-        if (order.request.sizeDelta.unwrap() != 0) {
+        if (!order.request.sizeDelta.isZero()) {
             SettlementStrategy.Data storage strategy = PerpsMarketConfiguration
                 .load(order.request.marketId)
                 .settlementStrategies[order.request.settlementStrategyId];
@@ -282,7 +283,7 @@ library AsyncOrder {
         runtime.accountId = order.request.accountId;
         runtime.marketId = order.request.marketId;
 
-        if (runtime.sizeDelta.unwrap() == 0) {
+        if (runtime.sizeDelta.isZero()) {
             revert ZeroSizeOrder();
         }
 
@@ -436,7 +437,7 @@ library AsyncOrder {
         QuantoInt256 notionalDiff = sizeDelta.to256().mulDecimalToQuanto(fillPrice.toInt());
 
         // does this trade keep the skew on one side?
-        if (MathUtil.sameSide(marketSkew.unwrap() + sizeDelta.unwrap(), marketSkew.unwrap())) {
+        if ((marketSkew + sizeDelta.to256()).sameSide(marketSkew)) {
             // use a flat maker/taker fee for the entire size depending on whether the skew is increased or reduced.
             //
             // if the order is submitted on the same side as the skew (increasing it) - the taker fee is charged.
@@ -460,15 +461,15 @@ library AsyncOrder {
         //
         // we then multiply the sizes by the fill price to get the notional value of each side, and that times the fee rate for each side
 
-        uint256 makerFee = MathUtil.abs(marketSkew.unwrap()).mulDecimal(fillPrice.unwrap()).mulDecimal(
+        QuantoUint256 makerFee = marketSkew.abs().mulDecimalToQuanto(fillPrice).mulDecimal(
             orderFeeData.makerFee
         );
 
-        uint256 takerFee = MathUtil.abs(marketSkew.unwrap() + sizeDelta.unwrap()).mulDecimal(fillPrice.unwrap()).mulDecimal(
+        QuantoUint256 takerFee = (marketSkew + sizeDelta.to256()).abs().mulDecimalToQuanto(fillPrice).mulDecimal(
             orderFeeData.takerFee
         );
 
-        return QuantoUint256.wrap(takerFee + makerFee);
+        return takerFee + makerFee;
     }
 
     /**

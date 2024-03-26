@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
+import {USDInt256, USDUint256, BaseQuantoPerUSDUint256, BaseQuantoPerUSDUint128, BaseQuantoPerUSDInt128} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
+
 /**
  * @title Liquidation module
  */
@@ -20,8 +22,8 @@ interface ILiquidationModule {
     event PositionLiquidated(
         uint128 indexed accountId,
         uint128 indexed marketId,
-        uint256 amountLiquidated,
-        int128 currentPositionSize
+        BaseQuantoPerUSDUint128 amountLiquidated,
+        BaseQuantoPerUSDInt128 currentPositionSize
     );
 
     /**
@@ -34,10 +36,10 @@ interface ILiquidationModule {
      */
     event AccountFlaggedForLiquidation(
         uint128 indexed accountId,
-        int256 availableMargin,
-        uint256 requiredMaintenanceMargin,
-        uint256 liquidationReward,
-        uint256 flagReward
+        USDInt256 availableMargin,
+        USDUint256 requiredMaintenanceMargin,
+        USDUint256 liquidationReward,
+        USDUint256 flagReward
     );
 
     /**
@@ -49,7 +51,7 @@ interface ILiquidationModule {
      */
     event AccountLiquidationAttempt(
         uint128 indexed accountId,
-        uint256 reward,
+        USDUint256 reward,
         bool fullLiquidation
     );
 
@@ -59,7 +61,7 @@ interface ILiquidationModule {
      * @param accountId Id of the account to liquidate.
      * @return liquidationReward total reward sent to liquidator.
      */
-    function liquidate(uint128 accountId) external returns (uint256 liquidationReward);
+    function liquidate(uint128 accountId) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Liquidates up to maxNumberOfAccounts flagged accounts.
@@ -68,7 +70,7 @@ interface ILiquidationModule {
      */
     function liquidateFlagged(
         uint256 maxNumberOfAccounts
-    ) external returns (uint256 liquidationReward);
+    ) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Liquidates the listed flagged accounts.
@@ -78,7 +80,7 @@ interface ILiquidationModule {
      */
     function liquidateFlaggedAccounts(
         uint128[] calldata accountIds
-    ) external returns (uint256 liquidationReward);
+    ) external returns (USDUint256 liquidationReward);
 
     /**
      * @notice Returns the list of flagged accounts.
@@ -104,8 +106,8 @@ interface ILiquidationModule {
         external
         view
         returns (
-            uint256 capacity,
-            uint256 maxLiquidationInWindow,
+            BaseQuantoPerUSDUint256 capacity,
+            BaseQuantoPerUSDUint256 maxLiquidationInWindow,
             uint256 latestLiquidationTimestamp
         );
 }

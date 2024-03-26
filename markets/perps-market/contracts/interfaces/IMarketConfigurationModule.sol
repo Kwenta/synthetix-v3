@@ -99,7 +99,7 @@ interface IMarketConfigurationModule {
         uint256 maintenanceMarginRatioD18,
         uint256 minimumInitialMarginRatioD18,
         uint256 flagRewardRatioD18,
-        uint256 minimumPositionMargin
+        QuantoUint256 minimumPositionMargin
     );
 
     /**
@@ -225,7 +225,7 @@ interface IMarketConfigurationModule {
         uint256 minimumInitialMarginRatioD18,
         uint256 maintenanceMarginScalarD18,
         uint256 flagRewardRatioD18,
-        uint256 minimumPositionMargin
+        QuantoUint256 minimumPositionMargin
     ) external;
 
     /**
@@ -312,7 +312,7 @@ interface IMarketConfigurationModule {
             uint256 minimumInitialMarginRatioD18,
             uint256 maintenanceMarginScalarD18,
             uint256 flagRewardRatioD18,
-            uint256 minimumPositionMargin
+            QuantoUint256 minimumPositionMargin
         );
 
     /**
