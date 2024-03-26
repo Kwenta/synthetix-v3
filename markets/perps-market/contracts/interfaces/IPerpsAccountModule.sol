@@ -73,7 +73,7 @@ interface IPerpsAccountModule {
      * @param accountId Id of the account.
      * @return openInterestValue total open interest value of the account.
      */
-    function totalAccountOpenInterest(uint128 accountId) external view returns (uint256);
+    function totalAccountOpenInterest(uint128 accountId) external view returns (USDUint256);
 
     /**
      * @notice Gets the details of an open position.

@@ -96,7 +96,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
     /**
      * @inheritdoc IPerpsAccountModule
      */
-    function totalAccountOpenInterest(uint128 accountId) external view override returns (uint256) {
+    function totalAccountOpenInterest(uint128 accountId) external view override returns (USDUint256) {
         return PerpsAccount.load(accountId).getTotalNotionalOpenInterest();
     }
 

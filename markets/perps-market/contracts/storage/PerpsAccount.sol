@@ -302,7 +302,7 @@ library PerpsAccount {
 
     function getTotalNotionalOpenInterest(
         Data storage self
-    ) internal view returns (uint256 totalAccountOpenInterest) {
+    ) internal view returns (USDUint256 totalAccountOpenInterest) {
         for (uint256 i = 1; i <= self.openPositionMarketIds.length(); i++) {
             uint128 marketId = self.openPositionMarketIds.valueAt(i).to128();
 
@@ -314,7 +314,7 @@ library PerpsAccount {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT);
             USDUint256 usdValue = openInterest.mulDecimalToUSD(quantoPrice);
 
-            totalAccountOpenInterest += usdValue.unwrap();
+            totalAccountOpenInterest = totalAccountOpenInterest + usdValue;
         }
     }
 
