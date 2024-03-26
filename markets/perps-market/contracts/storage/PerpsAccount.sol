@@ -144,7 +144,7 @@ library PerpsAccount {
             requiredMaintenanceMargin,
             liquidationReward
         ) = getAccountRequiredMargins(self, stalenessTolerance);
-        isEligible = (requiredMaintenanceMargin + liquidationReward).unwrap().toInt() > availableMargin.unwrap();
+        isEligible = (requiredMaintenanceMargin + liquidationReward).toInt() > availableMargin;
     }
 
     function flagForLiquidation(
