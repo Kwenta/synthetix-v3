@@ -517,11 +517,11 @@ library AsyncOrder {
         int256 pdAfter = newSkew.divDecimal(skewScale.toInt());
 
         // calculate price before and after trade with pd applied
-        int256 priceBefore = price.unwrap().toInt() + (price.unwrap().toInt().mulDecimal(pdBefore));
-        int256 priceAfter = price.unwrap().toInt() + (price.unwrap().toInt().mulDecimal(pdAfter));
+        USDPerBaseInt256 priceBefore = price.toInt() + (price.toInt().mulDecimal(pdBefore));
+        USDPerBaseInt256 priceAfter = price.toInt() + (price.toInt().mulDecimal(pdAfter));
 
         // the fill price is the average of those prices
-        return USDPerBaseUint256.wrap((priceBefore + priceAfter).toUint().divDecimal(DecimalMath.UNIT * 2));
+        return (priceBefore + priceAfter).toUint().divDecimal(DecimalMath.UNIT * 2);
     }
 
     struct RequiredMarginWithNewPositionRuntime {
