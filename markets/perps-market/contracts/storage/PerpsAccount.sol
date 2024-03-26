@@ -100,7 +100,7 @@ library PerpsAccount {
     }
 
     function validateMaxPositions(uint128 accountId, uint128 marketId) internal view {
-        if (PerpsMarket.accountPosition(marketId, accountId).size.unwrap() == 0) {
+        if (PerpsMarket.accountPosition(marketId, accountId).size.isZero()) {
             uint128 maxPositionsPerAccount = GlobalPerpsMarketConfiguration
                 .load()
                 .maxPositionsPerAccount;
