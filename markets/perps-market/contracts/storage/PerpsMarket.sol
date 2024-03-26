@@ -383,7 +383,7 @@ library PerpsMarket {
                 newSize.abs().toInt();
 
             BaseQuantoPerUSDInt256 newSideSize;
-            if (InteractionsBaseQuantoPerUSDInt128.zero() < newSize) {
+            if (newSize.greaterThanZero()) {
                 // long case: marketSize + skew
                 //            = (|longSize| + |shortSize|) + (longSize + shortSize)
                 //            = 2 * longSize
@@ -400,17 +400,17 @@ library PerpsMarket {
                 revert PerpsMarketConfiguration.MaxOpenInterestReached(
                     self.id,
                     maxSize,
-                    newSideSize.div(2).unwrap()
+                    newSideSize.div(2)
                 );
             }
 
             // same check but with value (size * price)
             // note that if maxValue param is set to 0, this validation is skipped
-            if (maxValue.unwrap() > 0 && maxValue.unwrap() < MathUtil.abs(newSideSize.unwrap() / 2).mulDecimal(price.unwrap())) {
+            if (maxValue.greaterThanZero() && maxValue.unwrap() < MathUtil.abs(newSideSize.unwrap() / 2).mulDecimal(price.unwrap())) {
                 revert PerpsMarketConfiguration.MaxUSDOpenInterestReached(
                     self.id,
                     maxValue,
-                    newSideSize.div(2).unwrap(),
+                    newSideSize.div(2),
                     price
                 );
             }
