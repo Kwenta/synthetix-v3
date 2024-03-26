@@ -168,7 +168,7 @@ library PerpsMarket {
             }
         }
 
-        if (liquidatableAmount > InteractionsBaseQuantoPerUSDUint128.zero()) {
+        if (liquidatableAmount.greaterThanZero()) {
             _updateLiquidationData(self, liquidatableAmount);
         }
     }
