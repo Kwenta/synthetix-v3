@@ -146,7 +146,7 @@ library AsyncOrder {
         uint128 accountId
     ) internal view returns (Data storage order, SettlementStrategy.Data storage strategy) {
         order = load(accountId);
-        if (order.request.sizeDelta.unwrap() == 0) {
+        if (order.request.sizeDelta.isZero()) {
             revert OrderNotValid();
         }
 
