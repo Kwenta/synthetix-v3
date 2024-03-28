@@ -95,7 +95,7 @@ contract AsyncOrderSettlementPythModule is
         );
         runtime.pnlUint = runtime.pnl.abs();
 
-        if (runtime.pnl > InteractionsQuantoInt256.zero()) {
+        if (runtime.pnl.greaterThanZero()) {
             PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
                 runtime.marketId
             );
