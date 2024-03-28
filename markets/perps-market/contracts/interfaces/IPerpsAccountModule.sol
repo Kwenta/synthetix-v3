@@ -69,11 +69,12 @@ interface IPerpsAccountModule {
     function totalCollateralValue(uint128 accountId) external view returns (USDUint256);
 
     /**
-     * @notice Gets the account's total open interest value.
+     * @notice Gets the account's total open interest value converted from the quanto asset to USD.
      * @param accountId Id of the account.
      * @return openInterestValue total open interest value of the account.
+     * @dev conversion to USD needs to happen because different markets can have different quanto assets.
      */
-    function totalAccountOpenInterest(uint128 accountId) external view returns (uint256);
+    function totalAccountOpenInterest(uint128 accountId) external view returns (USDUint256);
 
     /**
      * @notice Gets the details of an open position.

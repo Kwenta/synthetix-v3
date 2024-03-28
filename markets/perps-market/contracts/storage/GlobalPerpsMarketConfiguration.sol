@@ -115,7 +115,7 @@ library GlobalPerpsMarketConfiguration {
         USDUint256 availableMarginInUsd
     ) internal view returns (USDUint256) {
         // Note: if availableMarginInUsd is zero, it means the account was flagged, so the maximumKeeperRewardCap will just be maxKeeperRewardUsd
-        if (availableMarginInUsd.unwrap() == 0) {
+        if (availableMarginInUsd.isZero()) {
             return self.maxKeeperRewardUsd;
         }
 

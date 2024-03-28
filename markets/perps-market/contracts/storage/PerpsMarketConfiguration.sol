@@ -6,7 +6,7 @@ import {SafeCastI128} from "@synthetixio/core-contracts/contracts/utils/SafeCast
 import {OrderFee} from "./OrderFee.sol";
 import {SettlementStrategy} from "./SettlementStrategy.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
-import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, QuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, BaseQuantoPerUSDInt256, QuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 library PerpsMarketConfiguration {
     using DecimalMath for int256;
@@ -15,12 +15,12 @@ library PerpsMarketConfiguration {
     using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
     using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
 
-    error MaxOpenInterestReached(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize, int256 newSideSize);
+    error MaxOpenInterestReached(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize, BaseQuantoPerUSDInt256 newSideSize);
 
     error MaxUSDOpenInterestReached(
         uint128 marketId,
         QuantoUint256 maxMarketValue,
-        int256 newSideSize,
+        BaseQuantoPerUSDInt256 newSideSize,
         USDPerBaseUint256 price
     );
 
@@ -109,7 +109,9 @@ library PerpsMarketConfiguration {
         Data storage self,
         BaseQuantoPerUSDUint256 positionSize
     ) internal view returns (uint256) {
-        return MathUtil.ceilDivide(positionSize.unwrap(), maxLiquidationAmountInWindow(self).unwrap());
+        BaseQuantoPerUSDUint256 maxLiquidation = maxLiquidationAmountInWindow(self);
+        if (maxLiquidation.isZero()) return 0;
+        return positionSize.ceilDivide(maxLiquidation);
     }
 
     function calculateFlagReward(
@@ -133,7 +135,7 @@ library PerpsMarketConfiguration {
             QuantoUint256 maintenanceMargin
         )
     {
-        if (size.unwrap() == 0) {
+        if (size.isZero()) {
             return (0, 0, InteractionsQuantoUint256.zero(), InteractionsQuantoUint256.zero());
         }
         BaseQuantoPerUSDUint256 sizeAbs = size.abs();

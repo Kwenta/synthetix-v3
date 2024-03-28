@@ -18,7 +18,7 @@ import {GlobalPerpsMarketConfiguration} from "./GlobalPerpsMarketConfiguration.s
 import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseInt256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDUint256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDUint128, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseInt256, USDPerQuantoUint256, USDPerBaseUint128, QuantoUint256, QuantoInt256, USDUint256, USDInt256, InteractionsQuantoUint256, InteractionsUSDPerQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt128, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDUint128, InteractionsUSDUint256, InteractionsUSDPerBaseUint256, InteractionsUSDPerBaseInt256, InteractionsUSDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 uint128 constant SNX_USD_MARKET_ID = 0;
 
@@ -41,6 +41,7 @@ library PerpsAccount {
     using DecimalMath for uint256;
     using KeeperCosts for KeeperCosts.Data;
     using AsyncOrder for AsyncOrder.Data;
+    using InteractionsUSDInt256 for USDInt256;
     using InteractionsUSDUint256 for USDUint256;
     using InteractionsQuantoUint256 for QuantoUint256;
     using InteractionsUSDPerQuantoUint256 for USDPerQuantoUint256;
@@ -63,8 +64,8 @@ library PerpsAccount {
     }
 
     error InsufficientCollateralAvailableForWithdraw(
-        uint256 availableUsdDenominated,
-        uint256 requiredUsdDenominated
+        USDUint256 availableUsdDenominated,
+        USDUint256 requiredUsdDenominated
     );
 
     error InsufficientSynthCollateral(
@@ -100,7 +101,7 @@ library PerpsAccount {
     }
 
     function validateMaxPositions(uint128 accountId, uint128 marketId) internal view {
-        if (PerpsMarket.accountPosition(marketId, accountId).size.unwrap() == 0) {
+        if (PerpsMarket.accountPosition(marketId, accountId).size.isZero()) {
             uint128 maxPositionsPerAccount = GlobalPerpsMarketConfiguration
                 .load()
                 .maxPositionsPerAccount;
@@ -144,7 +145,7 @@ library PerpsAccount {
             requiredMaintenanceMargin,
             liquidationReward
         ) = getAccountRequiredMargins(self, stalenessTolerance);
-        isEligible = (requiredMaintenanceMargin + liquidationReward).unwrap().toInt() > availableMargin.unwrap();
+        isEligible = (requiredMaintenanceMargin + liquidationReward).toInt() > availableMargin;
     }
 
     function flagForLiquidation(
@@ -204,7 +205,7 @@ library PerpsAccount {
         uint128 synthMarketId,
         uint256 amountToWithdraw,
         ISpotMarketSystem spotMarket
-    ) internal view returns (uint256 availableWithdrawableCollateralUsd) {
+    ) internal view returns (USDUint256 availableWithdrawableCollateralUsd) {
         uint256 collateralAmount = self.collateralAmounts[synthMarketId];
         if (collateralAmount < amountToWithdraw) {
             revert InsufficientSynthCollateral(synthMarketId, collateralAmount, amountToWithdraw);
@@ -224,7 +225,7 @@ library PerpsAccount {
 
         USDUint256 requiredMargin = initialRequiredMargin + liquidationReward;
         // availableMargin can be assumed to be positive since we check for isEligible for liquidation prior
-        availableWithdrawableCollateralUsd = availableMargin.unwrap().toUint() - requiredMargin.unwrap();
+        availableWithdrawableCollateralUsd = availableMargin.toUint() - requiredMargin;
 
         uint256 amountToWithdrawUsd;
         if (synthMarketId == SNX_USD_MARKET_ID) {
@@ -237,10 +238,10 @@ library PerpsAccount {
             );
         }
 
-        if (amountToWithdrawUsd > availableWithdrawableCollateralUsd) {
+        if (USDUint256.wrap(amountToWithdrawUsd) > availableWithdrawableCollateralUsd) {
             revert InsufficientCollateralAvailableForWithdraw(
                 availableWithdrawableCollateralUsd,
-                amountToWithdrawUsd
+                USDUint256.wrap(amountToWithdrawUsd)
             );
         }
     }
@@ -249,7 +250,7 @@ library PerpsAccount {
         Data storage self,
         PerpsPrice.Tolerance stalenessTolerance
     ) internal view returns (USDUint256) {
-        uint256 totalCollateralValue;
+        USDUint256 totalCollateralValue;
         ISpotMarketSystem spotMarket = PerpsMarketFactory.load().spotMarket;
         for (uint256 i = 1; i <= self.activeCollateralTypes.length(); i++) {
             uint128 synthMarketId = self.activeCollateralTypes.valueAt(i).to128();
@@ -265,9 +266,9 @@ library PerpsAccount {
                     Price.Tolerance(uint256(stalenessTolerance)) // solhint-disable-line numcast/safe-cast
                 );
             }
-            totalCollateralValue += amountToAdd;
+            totalCollateralValue = totalCollateralValue + USDUint256.wrap(amountToAdd);
         }
-        return USDUint256.wrap(totalCollateralValue);
+        return totalCollateralValue;
     }
 
     function getAccountPnl(
@@ -301,7 +302,7 @@ library PerpsAccount {
 
     function getTotalNotionalOpenInterest(
         Data storage self
-    ) internal view returns (uint256 totalAccountOpenInterest) {
+    ) internal view returns (USDUint256 totalAccountOpenInterest) {
         for (uint256 i = 1; i <= self.openPositionMarketIds.length(); i++) {
             uint128 marketId = self.openPositionMarketIds.valueAt(i).to128();
 
@@ -313,7 +314,7 @@ library PerpsAccount {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT);
             USDUint256 usdValue = openInterest.mulDecimalToUSD(quantoPrice);
 
-            totalAccountOpenInterest += usdValue.unwrap();
+            totalAccountOpenInterest = totalAccountOpenInterest + usdValue;
         }
     }
 
@@ -371,7 +372,6 @@ library PerpsAccount {
         return (initialMargin, maintenanceMargin, possibleLiquidationReward);
     }
 
-    /// @dev Returns USD
     function getKeeperRewardsAndCosts(
         Data storage self,
         uint128 skipMarketId
@@ -567,19 +567,19 @@ library PerpsAccount {
         oldPositionAbsSize = oldPositionSize.abs128();
         amountToLiquidate = perpsMarket.maxLiquidatableAmount(oldPositionAbsSize);
 
-        if (amountToLiquidate.unwrap() == 0) {
+        if (amountToLiquidate.isZero()) {
             return (InteractionsBaseQuantoPerUSDUint128.zero(), oldPositionSize, InteractionsBaseQuantoPerUSDInt128.zero(), oldPositionAbsSize, marketUpdateData);
         }
 
         BaseQuantoPerUSDInt128 amtToLiquidationInt = amountToLiquidate.toInt();
         // reduce position size
-        newPositionSize = oldPositionSize.unwrap() > 0
+        newPositionSize = oldPositionSize.greaterThanZero()
             ? oldPositionSize - amtToLiquidationInt
             : oldPositionSize + amtToLiquidationInt;
 
         // create new position in case of partial liquidation
         Position.Data memory newPosition;
-        if (newPositionSize.unwrap() != 0) {
+        if (!newPositionSize.isZero()) {
             newPosition = Position.Data({
                 marketId: marketId,
                 latestInteractionPrice: price.to128(),
