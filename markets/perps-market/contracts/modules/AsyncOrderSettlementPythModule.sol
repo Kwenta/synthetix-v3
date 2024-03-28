@@ -100,7 +100,7 @@ contract AsyncOrderSettlementPythModule is
                 runtime.marketId
             );
             perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
-        } else if (runtime.pnl < InteractionsQuantoInt256.zero()) {
+        } else if (runtime.pnl.lessThanZero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
