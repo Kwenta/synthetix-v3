@@ -512,13 +512,13 @@ library AsyncOrder {
             return price;
         }
         // calculate pd (premium/discount) before and after trade
-        int256 pdBefore = skew.unwrap().divDecimal(skewScale.toInt());
-        int256 newSkew = skew.unwrap() + size.unwrap();
-        int256 pdAfter = newSkew.divDecimal(skewScale.toInt());
+        BaseQuantoPerUSDInt256 pdBefore = skew.divDecimal(skewScale.toInt());
+        BaseQuantoPerUSDInt256 newSkew = skew + size.to256();
+        BaseQuantoPerUSDInt256 pdAfter = newSkew.divDecimal(skewScale.toInt());
 
         // calculate price before and after trade with pd applied
-        USDPerBaseInt256 priceBefore = price.toInt() + (price.toInt().mulDecimal(pdBefore));
-        USDPerBaseInt256 priceAfter = price.toInt() + (price.toInt().mulDecimal(pdAfter));
+        USDPerBaseInt256 priceBefore = price.toInt() + (price.toInt().mulDecimal(pdBefore.unwrap()));
+        USDPerBaseInt256 priceAfter = price.toInt() + (price.toInt().mulDecimal(pdAfter.unwrap()));
 
         // the fill price is the average of those prices
         return (priceBefore + priceAfter).toUint().divDecimal(DecimalMath.UNIT * 2);
