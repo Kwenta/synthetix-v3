@@ -81,7 +81,7 @@ interface IMarketConfigurationModule {
         uint128 indexed marketId,
         uint256 maxLiquidationLimitAccumulationMultiplier,
         uint256 maxSecondsInLiquidationWindow,
-        uint256 maxLiquidationPd,
+        BaseQuantoPerUSDUint256 maxLiquidationPd,
         address endorsedLiquidator
     );
 
@@ -206,7 +206,7 @@ interface IMarketConfigurationModule {
         uint128 marketId,
         uint256 maxLiquidationLimitAccumulationMultiplier,
         uint256 maxSecondsInLiquidationWindow,
-        uint256 maxLiquidationPd,
+        BaseQuantoPerUSDUint256 maxLiquidationPd,
         address endorsedLiquidator
     ) external;
 
@@ -289,7 +289,7 @@ interface IMarketConfigurationModule {
         returns (
             uint256 maxLiquidationLimitAccumulationMultiplier,
             uint256 maxSecondsInLiquidationWindow,
-            uint256 maxLiquidationPd,
+            BaseQuantoPerUSDUint256 maxLiquidationPd,
             address endorsedLiquidator
         );
 
