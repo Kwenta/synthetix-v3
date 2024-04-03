@@ -23,7 +23,7 @@
   "author": "Synthetix",
   "license": "MIT",
   "devDependencies": {
-    "@kwenta/quanto-dimensions": "^1.1.2",
+    "@kwenta/quanto-dimensions": "^1.1.3",
     "@synthetixio/common-config": "workspace:*",
     "@synthetixio/core-contracts": "workspace:*",
     "@synthetixio/core-modules": "workspace:*",
