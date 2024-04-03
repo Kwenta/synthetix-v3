@@ -374,7 +374,7 @@ library PerpsMarket {
         BaseQuantoPerUSDInt128 newSize
     ) internal view {
         // Allow users to reduce an order no matter the market conditions.
-        bool isReducingInterest = MathUtil.isSameSideReducing(oldSize.unwrap(), newSize.unwrap());
+        bool isReducingInterest = oldSize.isSameSideReducing(newSize);
         if (!isReducingInterest) {
             BaseQuantoPerUSDInt256 newSkew = self.skew - oldSize.to256() + newSize.to256();
 
