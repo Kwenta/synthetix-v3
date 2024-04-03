@@ -2,8 +2,11 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
+import {Price} from "@synthetixio/spot-market/contracts/storage/Price.sol";
 import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFlag.sol";
 import {IAsyncOrderSettlementPythModule} from "../interfaces/IAsyncOrderSettlementPythModule.sol";
+import {ISpotMarketSystem} from "../interfaces/external/ISpotMarketSystem.sol";
+import {ITokenModule} from "@synthetixio/core-modules/contracts/interfaces/ITokenModule.sol";
 import {PerpsAccount} from "../storage/PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
@@ -100,7 +103,37 @@ contract AsyncOrderSettlementPythModule is
                 runtime.marketId
             );
             perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
-        } else if (runtime.pnl < InteractionsQuantoInt256.zero()) {
+
+            // get cost of trader quanto synth winnings in the spot market
+            ISpotMarketSystem spotMarket = factory.spotMarket;
+            (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
+                marketConfig.quantoSynthMarketId,
+                runtime.pnl.unwrap().toUint(),
+                Price.Tolerance.DEFAULT // TODO: check correct price tolerance
+            );
+
+            // borrow sUSD from the pool needed to buy quanto synths
+            factory.synthetix.withdrawMarketUsd(
+                factory.perpsMarketId,
+                address(this),
+                costOfSynthInUSD
+            );
+
+            // buy the quanto synths needed to payout the trader
+            factory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
+            spotMarket.buyExactOut(
+                marketConfig.quantoSynthMarketId,
+                runtime.pnl.unwrap().toUint(),
+                costOfSynthInUSD,
+                address(0) // TODO: change refferer to KWENTA?
+            );
+
+            ITokenModule synth = ITokenModule(
+                spotMarket.getSynth(marketConfig.quantoSynthMarketId)
+            );
+            // depositing quanto synth into market collateral, ready for later withdrawal by trader
+            factory.depositMarketCollateral(synth, runtime.pnl.unwrap().toUint());
+        } else if (runtime.pnl.lessThanZero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
