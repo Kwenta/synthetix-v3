@@ -79,7 +79,7 @@ library GlobalPerpsMarket {
         USDInt256 delegatedCollateralValueInt = withdrawableUsd.toInt() -
             totalCollateralValue(self).toInt();
         lockedCredit = minimumCredit(self);
-        if (delegatedCollateralValueInt <= InteractionsUSDInt256.zero()) {
+        if (delegatedCollateralValueInt.lessThanOrEqualToZero()) {
             return (DecimalMath.UNIT_UINT128, InteractionsUSDUint256.zero(), lockedCredit);
         }
 

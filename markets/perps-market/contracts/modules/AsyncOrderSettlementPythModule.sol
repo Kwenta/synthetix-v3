@@ -125,7 +125,7 @@ contract AsyncOrderSettlementPythModule is
 
         // since margin is deposited when trader deposits, as long as the owed collateral is deducted
         // from internal accounting, fees are automatically realized by the stakers
-        if (runtime.amountToDeduct > InteractionsUSDUint256.zero()) {
+        if (runtime.amountToDeduct.greaterThanZero()) {
             (runtime.deductedSynthIds, runtime.deductedAmount) = perpsAccount.deductFromAccount(
                 runtime.amountToDeduct
             );
@@ -147,7 +147,7 @@ contract AsyncOrderSettlementPythModule is
             settlementStrategy.settlementReward +
             KeeperCosts.load().getSettlementKeeperCosts();
 
-        if (runtime.settlementReward > InteractionsUSDUint256.zero()) {
+        if (runtime.settlementReward.greaterThanZero()) {
             // pay keeper
             factory.withdrawMarketUsd(ERC2771Context._msgSender(), runtime.settlementReward);
         }
