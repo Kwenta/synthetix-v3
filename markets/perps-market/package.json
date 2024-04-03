@@ -4,7 +4,7 @@
   "description": "Perps Market implementation",
   "scripts": {
     "build": "yarn build:contracts",
-    "build:contracts": "hardhat compile --force && hardhat storage:verify && hardhat cannon:build",
+    "build:contracts": "hardhat compile --force && hardhat storage:verify && CANNON_REGISTRY_PRIORITY=local hardhat cannon:build",
     "build-testable": "CANNON_REGISTRY_PRIORITY=local hardhat cannon:build cannonfile.test.toml",
     "check:storage": "git diff --exit-code storage.dump.sol",
     "start": "yarn build && yarn cannon-build",
@@ -23,7 +23,7 @@
   "author": "Synthetix",
   "license": "MIT",
   "devDependencies": {
-    "@kwenta/quanto-dimensions": "^1.1.2",
+    "@kwenta/quanto-dimensions": "^1.1.3",
     "@synthetixio/common-config": "workspace:*",
     "@synthetixio/core-contracts": "workspace:*",
     "@synthetixio/core-modules": "workspace:*",

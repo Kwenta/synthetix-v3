@@ -28,8 +28,8 @@ library Position {
         uint128 marketId;
         BaseQuantoPerUSDInt128 size;
         USDPerBaseUint128 latestInteractionPrice;
-        uint256 latestInterestAccrued;
         USDPerBaseInt128 latestInteractionFunding;
+        uint256 latestInterestAccrued;
     }
 
     function update(
