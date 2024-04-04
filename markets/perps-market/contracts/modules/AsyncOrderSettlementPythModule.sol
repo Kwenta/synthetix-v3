@@ -7,7 +7,7 @@ import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFl
 import {IAsyncOrderSettlementPythModule} from "../interfaces/IAsyncOrderSettlementPythModule.sol";
 import {ISpotMarketSystem} from "../interfaces/external/ISpotMarketSystem.sol";
 import {ITokenModule} from "@synthetixio/core-modules/contracts/interfaces/ITokenModule.sol";
-import {PerpsAccount} from "../storage/PerpsAccount.sol";
+import {PerpsAccount, SNX_USD_MARKET_ID} from "../storage/PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
 import {PerpsMarket} from "../storage/PerpsMarket.sol";
@@ -102,37 +102,42 @@ contract AsyncOrderSettlementPythModule is
             PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
                 runtime.marketId
             );
-            perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
+            uint128 quantoSynthMarketId = marketConfig.quantoSynthMarketId;
+            if (quantoSynthMarketId == SNX_USD_MARKET_ID) {
+                perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
+            } else {
+                perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
 
-            // get cost of trader quanto synth winnings in the spot market
-            ISpotMarketSystem spotMarket = factory.spotMarket;
-            (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
-                marketConfig.quantoSynthMarketId,
-                runtime.pnl.unwrap().toUint(),
-                Price.Tolerance.DEFAULT // TODO: check correct price tolerance
-            );
+                // get cost of trader quanto synth winnings in the spot market
+                ISpotMarketSystem spotMarket = factory.spotMarket;
+                (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
+                    quantoSynthMarketId,
+                    runtime.pnl.unwrap().toUint(),
+                    Price.Tolerance.DEFAULT // TODO: check correct price tolerance
+                );
 
-            // borrow sUSD from the pool needed to buy quanto synths
-            factory.synthetix.withdrawMarketUsd(
-                factory.perpsMarketId,
-                address(this),
-                costOfSynthInUSD
-            );
+                // borrow sUSD from the pool needed to buy quanto synths
+                factory.synthetix.withdrawMarketUsd(
+                    factory.perpsMarketId,
+                    address(this),
+                    costOfSynthInUSD
+                );
 
-            // buy the quanto synths needed to payout the trader
-            factory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
-            spotMarket.buyExactOut(
-                marketConfig.quantoSynthMarketId,
-                runtime.pnl.unwrap().toUint(),
-                costOfSynthInUSD,
-                address(0) // TODO: change refferer to KWENTA?
-            );
+                // buy the quanto synths needed to payout the trader
+                factory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
+                spotMarket.buyExactOut(
+                    quantoSynthMarketId,
+                    runtime.pnl.unwrap().toUint(),
+                    costOfSynthInUSD,
+                    address(0) // TODO: change refferer to KWENTA?
+                );
 
-            ITokenModule synth = ITokenModule(
-                spotMarket.getSynth(marketConfig.quantoSynthMarketId)
-            );
-            // depositing quanto synth into market collateral, ready for later withdrawal by trader
-            factory.depositMarketCollateral(synth, runtime.pnl.unwrap().toUint());
+                ITokenModule synth = ITokenModule(
+                    spotMarket.getSynth(quantoSynthMarketId)
+                );
+                // depositing quanto synth into market collateral, ready for later withdrawal by trader
+                factory.depositMarketCollateral(synth, runtime.pnl.unwrap().toUint());
+            }
         } else if (runtime.pnl.lessThanZero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
