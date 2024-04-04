@@ -85,7 +85,7 @@ library GlobalPerpsMarket {
 
         delegatedCollateralValue = delegatedCollateralValueInt.toUint();
 
-        rate = lockedCredit.unwrap().divDecimal(delegatedCollateralValue.unwrap()).to128();
+        rate = lockedCredit.divDecimalToDimensionless(delegatedCollateralValue).to128();
     }
 
     function minimumCredit(
