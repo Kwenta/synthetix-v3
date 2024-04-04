@@ -2121,6 +2121,37 @@ describe('MarginModule', async () => {
       );
     });
 
+    it('should revert the number of collaterals exceed maximum', async () => {
+      const { BfpMarketProxy } = systems();
+      const from = owner();
+
+      // Hardcoded system maximum. This must also change if the system changes.
+      const MAX_SUPPORTED_MARGIN_COLLATERALS = 10;
+
+      const collateralsToConfigure = MAX_SUPPORTED_MARGIN_COLLATERALS + genNumber(1, 5);
+
+      const newCollaterals = genListOf(collateralsToConfigure, () => genOneOf(collaterals()));
+      const newSynthMarketIds = newCollaterals.map(({ synthMarketId }) => synthMarketId());
+      const newOracleNodeIds = genListOf(newCollaterals.length, () => genBytes32());
+      const newMaxAllowables = genListOf(newCollaterals.length, () =>
+        bn(genNumber(10_000, 100_000))
+      );
+      const newRewardDistributors = newCollaterals.map(({ rewardDistributorAddress }) =>
+        rewardDistributorAddress()
+      );
+
+      await assertRevert(
+        BfpMarketProxy.connect(from).setMarginCollateralConfiguration(
+          newSynthMarketIds,
+          newOracleNodeIds,
+          newMaxAllowables,
+          newRewardDistributors
+        ),
+        `MaxCollateralExceeded("${collateralsToConfigure}", "${MAX_SUPPORTED_MARGIN_COLLATERALS}")`,
+        BfpMarketProxy
+      );
+    });
+
     it('should revoke/approve collateral with 0/maxUint');
   });
 
@@ -2627,7 +2658,41 @@ describe('MarginModule', async () => {
       assertBn.equal(margin, expectedMargin);
     });
 
-    it('should return the discounted marginUsd less IM/keeperFees when position open');
+    it('should return the discounted marginUsd less IM when position open', async () => {
+      const { BfpMarketProxy } = systems();
+
+      await setMarketConfiguration(bs, {
+        minKeeperFeeUsd: bn(0),
+        maxKeeperFeeUsd: bn(0),
+      });
+
+      const { trader, marketId, collateral, market, collateralDepositAmount } = await depositMargin(
+        bs,
+        genTrader(bs, {
+          desiredMarginUsdDepositAmount: 10_000,
+          desiredCollateral: genOneOf(collateralsWithoutSusd()), // Use non sUSD so margin is discounted.
+        })
+      );
+
+      const order = await genOrder(bs, market, collateral, collateralDepositAmount, {
+        desiredLeverage: 1,
+        desiredSide: 1,
+      });
+      await commitAndSettle(bs, marketId, trader, order);
+
+      const withdrawableMargin = await BfpMarketProxy.getWithdrawableMargin(
+        trader.accountId,
+        marketId
+      );
+      const { discountedMarginUsd } = await BfpMarketProxy.getMarginDigest(
+        trader.accountId,
+        marketId
+      );
+      const { im } = await BfpMarketProxy.getLiquidationMarginUsd(trader.accountId, marketId, 0);
+      const expectedWithdrawableMargin = wei(discountedMarginUsd).sub(im);
+
+      assertBn.equal(withdrawableMargin, expectedWithdrawableMargin.toBN());
+    });
   });
 
   describe('getMarginCollateralConfiguration', () => {
