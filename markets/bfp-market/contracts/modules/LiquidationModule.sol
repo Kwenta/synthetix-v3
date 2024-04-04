@@ -237,9 +237,15 @@ contract LiquidationModule is ILiquidationModule {
         }
         PerpMarketConfiguration.GlobalData storage globalConfig = PerpMarketConfiguration.load();
 
+        uint256 ethPrice = globalConfig
+            .oracleManager
+            .process(globalConfig.ethOracleNodeId)
+            .price
+            .toUint();
         uint256 flagReward = Position.getLiquidationFlagReward(
             MathUtil.abs(size).mulDecimal(oraclePrice),
             marginValues.collateralUsd,
+            ethPrice,
             PerpMarketConfiguration.load(marketId),
             globalConfig
         );
@@ -368,7 +374,7 @@ contract LiquidationModule is ILiquidationModule {
 
         liquidateCollateral(accountId, marketId, market, PerpMarketConfiguration.load());
 
-        // Pay flagger.
+        // Pay the caller.
         globalConfig.synthetix.withdrawMarketUsd(
             marketId,
             ERC2771Context._msgSender(),
@@ -403,15 +409,22 @@ contract LiquidationModule is ILiquidationModule {
             market,
             oraclePrice
         );
+        uint256 ethPrice = globalConfig
+            .oracleManager
+            .process(globalConfig.ethOracleNodeId)
+            .price
+            .toUint();
 
         flagKeeperReward = Position.getLiquidationFlagReward(
             absSize.mulDecimal(oraclePrice),
             marginValues.collateralUsd,
+            ethPrice,
             marketConfig,
             globalConfig
         );
         liqKeeperFee = Position.getLiquidationKeeperFee(
             absSize.to128(),
+            ethPrice,
             marketConfig,
             globalConfig
         );

@@ -28,6 +28,10 @@ contract MarginModule is IMarginModule {
     using Margin for Margin.GlobalData;
     using Margin for Margin.Data;
 
+    // --- Constants --- //
+
+    uint256 private constant MAX_SUPPORTED_MARGIN_COLLATERALS = 10;
+
     // --- Runtime structs --- //
 
     struct Runtime_setMarginCollateralConfiguration {
@@ -357,6 +361,14 @@ contract MarginModule is IMarginModule {
         runtime.maxApproveAmount = type(uint256).max;
         runtime.previousSupportedSynthMarketIds = globalMarginConfig.supportedSynthMarketIds;
 
+        // Number of synth collaterals to configure exceeds system maxmium.
+        if (runtime.lengthAfter > MAX_SUPPORTED_MARGIN_COLLATERALS) {
+            revert ErrorUtil.MaxCollateralExceeded(
+                runtime.lengthAfter,
+                MAX_SUPPORTED_MARGIN_COLLATERALS
+            );
+        }
+
         // Ensure all supplied arrays have the same length.
         if (
             oracleNodeIds.length != runtime.lengthAfter ||
@@ -590,30 +602,16 @@ contract MarginModule is IMarginModule {
         }
 
         PerpMarketConfiguration.Data storage marketConfig = PerpMarketConfiguration.load(marketId);
-        (uint256 im, , uint256 liqFlagReward) = Position.getLiquidationMarginUsd(
+        (uint256 im, , ) = Position.getLiquidationMarginUsd(
             size,
             oraclePrice,
             marginValues.collateralUsd,
             marketConfig
         );
-        uint256 liqKeeperFee = Position.getLiquidationKeeperFee(
-            MathUtil.abs(size).to128(),
-            marketConfig,
-            PerpMarketConfiguration.load()
-        );
 
         // There is a position open. Discount the collateral, deduct running losses (or add profits), reduce
         // by the IM as well as the liq and flag fee for an approximate withdrawable margin. We call this approx
         // because both the liq and flag rewards can change based on chain usage.
-        return
-            MathUtil
-                .max(
-                    marginValues.discountedMarginUsd.toInt() -
-                        im.toInt() -
-                        liqFlagReward.toInt() -
-                        liqKeeperFee.toInt(),
-                    0
-                )
-                .toUint();
+        return MathUtil.max(marginValues.discountedMarginUsd.toInt() - im.toInt(), 0).toUint();
     }
 }
