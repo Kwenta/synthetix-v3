@@ -477,7 +477,7 @@ library AsyncOrder {
      */
     function calculateFillPrice(
         BaseQuantoPerUSDInt256 skew,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         BaseQuantoPerUSDInt128 size,
         USDPerBaseUint256 price
     ) internal pure returns (USDPerBaseUint256) {
@@ -508,17 +508,17 @@ library AsyncOrder {
         // fill_price = (price_before + price_after) / 2
         //            = (1200 + 1200.12) / 2
         //            = 1200.06
-        if (skewScale == 0) {
+        if (skewScale.isZero()) {
             return price;
         }
         // calculate pd (premium/discount) before and after trade
-        BaseQuantoPerUSDInt256 pdBefore = skew.divDecimal(skewScale.toInt());
+        int256 pdBefore = skew.divDecimalToDimensionless(skewScale.toInt());
         BaseQuantoPerUSDInt256 newSkew = skew + size.to256();
-        BaseQuantoPerUSDInt256 pdAfter = newSkew.divDecimal(skewScale.toInt());
+        int256 pdAfter = newSkew.divDecimalToDimensionless(skewScale.toInt());
 
         // calculate price before and after trade with pd applied
-        USDPerBaseInt256 priceBefore = price.toInt() + (price.toInt().mulDecimal(pdBefore.unwrap()));
-        USDPerBaseInt256 priceAfter = price.toInt() + (price.toInt().mulDecimal(pdAfter.unwrap()));
+        USDPerBaseInt256 priceBefore = price.toInt() + (price.toInt().mulDecimal(pdBefore));
+        USDPerBaseInt256 priceAfter = price.toInt() + (price.toInt().mulDecimal(pdAfter));
 
         // the fill price is the average of those prices
         return (priceBefore + priceAfter).toUint().divDecimal(DecimalMath.UNIT * 2);

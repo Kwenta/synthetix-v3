@@ -193,7 +193,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
      */
     function setFundingParameters(
         uint128 marketId,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         uint256 maxFundingVelocity
     ) external override {
         OwnableStorage.onlyOwner();
@@ -211,7 +211,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         uint128 marketId,
         uint256 maxLiquidationLimitAccumulationMultiplier,
         uint256 maxSecondsInLiquidationWindow,
-        BaseQuantoPerUSDUint256 maxLiquidationPd,
+        uint256 maxLiquidationPd,
         address endorsedLiquidator
     ) external override {
         OwnableStorage.onlyOwner();
@@ -294,7 +294,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         returns (
             uint256 maxLiquidationLimitAccumulationMultiplier,
             uint256 maxSecondsInLiquidationWindow,
-            BaseQuantoPerUSDUint256 maxLiquidationPd,
+            uint256 maxLiquidationPd,
             address endorsedLiquidator
         )
     {
@@ -338,7 +338,7 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
      */
     function getFundingParameters(
         uint128 marketId
-    ) external view override returns (uint256 skewScale, uint256 maxFundingVelocity) {
+    ) external view override returns (BaseQuantoPerUSDUint256 skewScale, uint256 maxFundingVelocity) {
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
 
         skewScale = config.skewScale;

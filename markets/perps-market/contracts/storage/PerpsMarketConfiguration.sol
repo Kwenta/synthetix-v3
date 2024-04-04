@@ -31,7 +31,7 @@ library PerpsMarketConfiguration {
         SettlementStrategy.Data[] settlementStrategies;
         BaseQuantoPerUSDUint256 maxMarketSize; // oi cap in base*quanto/usd
         uint256 maxFundingVelocity;
-        uint256 skewScale;
+        BaseQuantoPerUSDUint256 skewScale;
         /**
          * @dev the initial margin requirements for this market when opening a position
          * @dev this fraction is multiplied by the impact of the position on the skew (open position size / skewScale)
@@ -71,7 +71,7 @@ library PerpsMarketConfiguration {
         /**
          * @dev Threshold for allowing further liquidations when max liquidation amount is reached
          */
-        BaseQuantoPerUSDUint256 maxLiquidationPd;
+        uint256 maxLiquidationPd;
         /**
          * @dev if the msg.sender is this endorsed liquidator during an account liquidation, the max liquidation amount doesn't apply.
          * @dev this address is allowed to fully liquidate any account eligible for liquidation.
@@ -100,9 +100,9 @@ library PerpsMarketConfiguration {
     function maxLiquidationAmountInWindow(Data storage self) internal view returns (BaseQuantoPerUSDUint256) {
         OrderFee.Data storage orderFeeData = self.orderFees;
         return
-            BaseQuantoPerUSDUint256.wrap((orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
+            self.skewScale.mulDecimal(orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(
                 self.maxLiquidationLimitAccumulationMultiplier
-            ) * self.maxSecondsInLiquidationWindow);
+            ).mul(self.maxSecondsInLiquidationWindow);
     }
 
     function numberOfLiquidationWindows(
@@ -139,7 +139,7 @@ library PerpsMarketConfiguration {
             return (0, 0, InteractionsQuantoUint256.zero(), InteractionsQuantoUint256.zero());
         }
         BaseQuantoPerUSDUint256 sizeAbs = size.abs();
-        uint256 impactOnSkew = self.skewScale == 0 ? 0 : sizeAbs.unwrap().divDecimal(self.skewScale);
+        uint256 impactOnSkew = self.skewScale.isZero() ? 0 : sizeAbs.divDecimalToDimensionless(self.skewScale);
 
         initialMarginRatio =
             impactOnSkew.mulDecimal(self.initialMarginRatioD18) +

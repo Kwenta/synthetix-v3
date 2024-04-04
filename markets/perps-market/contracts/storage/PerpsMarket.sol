@@ -150,12 +150,12 @@ library PerpsMarket {
             return requestedLiquidationAmount;
         }
 
-        BaseQuantoPerUSDUint256 maxLiquidationPd = marketConfig.maxLiquidationPd;
+        uint256 maxLiquidationPd = marketConfig.maxLiquidationPd;
         // if liquidation capacity exists, update accordingly
         if (!liquidationCapacity.isZero()) {
             liquidatableAmount = liquidationCapacity.to128().min128(requestedLiquidationAmount);
         } else if (
-            !maxLiquidationPd.isZero() &&
+            maxLiquidationPd != 0 &&
             // only allow this if the last update was not in the current block
             latestLiquidationTimestamp != block.timestamp
         ) {
@@ -163,7 +163,7 @@ library PerpsMarket {
                 if capacity is at 0, but the market is under configured liquidation p/d,
                 another block of liquidation becomes allowable.
              */
-            BaseQuantoPerUSDUint256 currentPd = self.skew.abs().divDecimal(marketConfig.skewScale);
+            uint256 currentPd = self.skew.abs().divDecimalToDimensionless(marketConfig.skewScale);
             if (currentPd < maxLiquidationPd) {
                 liquidatableAmount = maxLiquidationInWindow.to128().min128(requestedLiquidationAmount);
             }
@@ -346,13 +346,13 @@ library PerpsMarket {
     function currentFundingVelocity(Data storage self) internal view returns (int256) {
         PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(self.id);
         int256 maxFundingVelocity = marketConfig.maxFundingVelocity.toInt();
-        int256 skewScale = marketConfig.skewScale.toInt();
+        BaseQuantoPerUSDInt256 skewScale = marketConfig.skewScale.toInt();
         // Avoid a panic due to div by zero. Return 0 immediately.
-        if (skewScale == 0) {
+        if (skewScale.isZero()) {
             return 0;
         }
         // Ensures the proportionalSkew is between -1 and 1.
-        int256 pSkew = self.skew.unwrap().divDecimal(skewScale);
+        int256 pSkew = self.skew.divDecimalToDimensionless(skewScale);
         int256 pSkewBounded = MathUtil.min(
             MathUtil.max(-(DecimalMath.UNIT).toInt(), pSkew),
             (DecimalMath.UNIT).toInt()
