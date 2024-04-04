@@ -69,7 +69,7 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
 
         runtime.fillPrice = asyncOrder.validateCancellation(settlementStrategy, price);
 
-        if (runtime.settlementReward > InteractionsUSDUint256.zero()) {
+        if (runtime.settlementReward.greaterThanZero()) {
             // deduct keeper reward
             (uint128[] memory deductedSynthIds, uint256[] memory deductedAmount) = PerpsAccount
                 .load(runtime.accountId)

@@ -163,7 +163,7 @@ library PerpsMarket {
                 if capacity is at 0, but the market is under configured liquidation p/d,
                 another block of liquidation becomes allowable.
              */
-            uint256 currentPd = MathUtil.abs(self.skew.unwrap()).divDecimal(marketConfig.skewScale);
+            uint256 currentPd = self.skew.abs().divDecimalToDimensionless(marketConfig.skewScale);
             if (currentPd < maxLiquidationPd) {
                 liquidatableAmount = maxLiquidationInWindow.to128().min128(requestedLiquidationAmount);
             }
@@ -346,13 +346,13 @@ library PerpsMarket {
     function currentFundingVelocity(Data storage self) internal view returns (int256) {
         PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(self.id);
         int256 maxFundingVelocity = marketConfig.maxFundingVelocity.toInt();
-        int256 skewScale = marketConfig.skewScale.toInt();
+        BaseQuantoPerUSDInt256 skewScale = marketConfig.skewScale.toInt();
         // Avoid a panic due to div by zero. Return 0 immediately.
-        if (skewScale == 0) {
+        if (skewScale.isZero()) {
             return 0;
         }
         // Ensures the proportionalSkew is between -1 and 1.
-        int256 pSkew = self.skew.unwrap().divDecimal(skewScale);
+        int256 pSkew = self.skew.divDecimalToDimensionless(skewScale);
         int256 pSkewBounded = MathUtil.min(
             MathUtil.max(-(DecimalMath.UNIT).toInt(), pSkew),
             (DecimalMath.UNIT).toInt()
@@ -374,7 +374,7 @@ library PerpsMarket {
         BaseQuantoPerUSDInt128 newSize
     ) internal view {
         // Allow users to reduce an order no matter the market conditions.
-        bool isReducingInterest = MathUtil.isSameSideReducing(oldSize.unwrap(), newSize.unwrap());
+        bool isReducingInterest = oldSize.isSameSideReducing(newSize);
         if (!isReducingInterest) {
             BaseQuantoPerUSDInt256 newSkew = self.skew - oldSize.to256() + newSize.to256();
 

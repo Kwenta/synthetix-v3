@@ -67,7 +67,7 @@ interface IMarketConfigurationModule {
      */
     event FundingParametersSet(
         uint128 indexed marketId,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         uint256 maxFundingVelocity
     );
 
@@ -190,7 +190,7 @@ interface IMarketConfigurationModule {
      */
     function setFundingParameters(
         uint128 marketId,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         uint256 maxFundingVelocity
     ) external;
 
@@ -323,7 +323,7 @@ interface IMarketConfigurationModule {
      */
     function getFundingParameters(
         uint128 marketId
-    ) external view returns (uint256 skewScale, uint256 maxFundingVelocity);
+    ) external view returns (BaseQuantoPerUSDUint256 skewScale, uint256 maxFundingVelocity);
 
     /**
      * @notice Gets the max size of an specific market.
