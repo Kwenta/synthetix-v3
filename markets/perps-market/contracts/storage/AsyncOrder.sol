@@ -561,7 +561,7 @@ library AsyncOrder {
     ) internal view returns (USDUint256) {
         RequiredMarginWithNewPositionRuntime memory runtime;
 
-        if (MathUtil.isSameSideReducing(oldPositionSize.unwrap(), newPositionSize.unwrap())) {
+        if (oldPositionSize.isSameSideReducing(newPositionSize)) {
             return InteractionsUSDUint256.zero();
         }
 
