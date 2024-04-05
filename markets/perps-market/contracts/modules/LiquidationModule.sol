@@ -247,7 +247,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
         runtime.totalLiquidationCost =
             KeeperCosts.load().getLiquidateKeeperCosts() +
             costOfFlagExecution;
-        if (positionFlagged || runtime.totalLiquidated > InteractionsBaseQuantoPerUSDUint256.zero()) {
+        if (positionFlagged || runtime.totalLiquidated.greaterThanZero()) {
             keeperLiquidationReward = _processLiquidationRewards(
                 positionFlagged ? runtime.totalFlaggingRewards : InteractionsUSDUint256.zero(),
                 runtime.totalLiquidationCost,
@@ -283,7 +283,7 @@ contract LiquidationModule is ILiquidationModule, IMarketEvents {
             costOfExecutionInUsd,
             availableMarginInUsd
         );
-        if (reward > InteractionsUSDUint256.zero()) {
+        if (reward.greaterThanZero()) {
             PerpsMarketFactory.load().withdrawMarketUsd(ERC2771Context._msgSender(), reward);
         }
     }
