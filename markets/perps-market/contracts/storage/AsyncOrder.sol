@@ -237,8 +237,6 @@ library AsyncOrder {
     /**
      * @dev Struct used internally in validateOrder() to prevent stack too deep error.
      */
-    // TODO: check to be sure commented out types can definitely be deleted safely
-    // TODO: if they can be deleted safely, delete them
     struct SimulateDataRuntime {
         bool isEligible;
         BaseQuantoPerUSDInt128 sizeDelta;
@@ -246,15 +244,11 @@ library AsyncOrder {
         uint128 marketId;
         USDPerBaseUint256 fillPrice;
         USDUint256 orderFees;
-        // uint256 availableMargin;
-        // uint256 currentLiquidationMargin;
         uint256 accumulatedLiquidationRewards;
         USDUint256 currentLiquidationReward;
         BaseQuantoPerUSDInt128 newPositionSize;
-        // uint256 newNotionalValue;
         USDInt256 currentAvailableMargin;
         USDUint256 requiredInitialMargin;
-        // uint256 initialRequiredMargin;
         USDUint256 totalRequiredMargin;
         Position.Data newPosition;
         bytes32 trackingCode;
