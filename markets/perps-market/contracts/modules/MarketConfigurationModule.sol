@@ -98,18 +98,21 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
     // TODO: potentially update how this is set
     // It may be better that setQuantoFeedId is updated in the same function call?
     // There should be some way to ensure that both or neither are set, and that they match up
-    // TODO: add interface
+    /**
+     * @inheritdoc IMarketConfigurationModule
+     */
     function setQuantoSynthMarket(
         uint128 marketId,
         uint128 quantoSynthMarketId
-    ) external {
+    ) external override {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
         config.quantoSynthMarketId = quantoSynthMarketId;
     }
 
-    // TODO: remove this
-    // TODO: add interface
+    /**
+     * @inheritdoc IMarketConfigurationModule
+     */
     function getQuantoSynthMarket(
         uint128 marketId
     ) external view returns (uint128) {
