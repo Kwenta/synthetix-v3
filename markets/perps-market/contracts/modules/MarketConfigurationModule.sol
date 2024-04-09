@@ -6,6 +6,7 @@ import {IMarketConfigurationModule} from "../interfaces/IMarketConfigurationModu
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol";
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
+import {PerpsMarketFactory} from "../storage/PerpsMarketFactory.sol";
 import {QuantoUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
@@ -108,6 +109,10 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
         config.quantoSynthMarketId = quantoSynthMarketId;
+
+        (, bytes32 sellFeedId,) = PerpsMarketFactory.load().spotMarket.getPriceData(quantoSynthMarketId);
+        PerpsPrice.load(marketId).updateQuantoFeedId(sellFeedId);
+        emit QuantoFeedIdSet(marketId, sellFeedId);
     }
 
     /**

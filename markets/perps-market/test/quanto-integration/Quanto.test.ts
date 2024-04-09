@@ -200,7 +200,6 @@ describe('Quanto', () => {
         // TODO: adjust bootstrap so that the same aggregator/oracle is used for the spot market and the perps market
         // TODO: we should be able to set the price of all these aggregators in a single go
         // update eth price on perps market (effects USD pnl)
-        await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(4_000));
         // update eth price on synth market (effects collateral value)
         await synthMarkets()[0].sellAggregator().mockSetCurrentPrice(bn(4_000));
         await synthMarkets()[0].buyAggregator().mockSetCurrentPrice(bn(4_000));
@@ -302,7 +301,7 @@ describe('Quanto', () => {
         // TODO: adjust bootstrap so that the same aggregator/oracle is used for the spot market and the perps market
         // TODO: we should be able to set the price of all these aggregators in a single go
         // update eth price on perps market (effects USD pnl)
-        await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(1_000));
+        // await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(1_000));
         // update eth price on synth market (effects collateral value)
         await synthMarkets()[0].sellAggregator().mockSetCurrentPrice(bn(1_000));
         await synthMarkets()[0].buyAggregator().mockSetCurrentPrice(bn(1_000));

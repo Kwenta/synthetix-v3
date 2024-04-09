@@ -139,21 +139,6 @@ export const bootstrapPerpsMarkets = (
         );
       });
       
-      if (quanto) {
-        before('create perps quanto price nodes', async () => {
-          const results = await createPythNode(r.owner(), quanto.price, contracts.OracleManager);
-          quantoOracleNodeId = results.oracleNodeId;
-          quantoAggregator = results.aggregator;
-        });
-
-        before('set quanto feed id', async () => {
-          await contracts.PerpsMarket.connect(r.owner()).setQuantoFeedId(
-            marketId,
-            quantoOracleNodeId
-          );
-        });
-      }
-
       before('set funding parameters', async () => {
         await contracts.PerpsMarket.connect(r.owner()).setFundingParameters(
           marketId,
