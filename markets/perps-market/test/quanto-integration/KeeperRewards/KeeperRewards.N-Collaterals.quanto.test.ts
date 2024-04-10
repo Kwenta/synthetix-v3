@@ -162,7 +162,7 @@ describe('Keeper Rewards - Multiple Collaterals', () => {
   it('emits position liquidated event', async () => {
     await assertEvent(
       liquidateTxn,
-      `PositionLiquidated(2, 25, ${bn(100)}, 0)`,
+      `PositionLiquidated(2, 25, ${bn(0.01)}, 0)`,
       systems().PerpsMarket
     );
   });

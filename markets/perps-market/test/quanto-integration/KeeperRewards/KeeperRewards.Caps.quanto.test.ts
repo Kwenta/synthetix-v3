@@ -182,7 +182,7 @@ describe('Keeper Rewards - Caps', () => {
 
       before('open position', async () => {
         const quantoPositionSize = getQuantoPositionSize({
-          sizeInBaseAsset: bn(100),
+          sizeInBaseAsset: bn(100), // sizeDelta of the normal perps test
           quantoAssetPrice: bn(10_000),
         });
         await openPosition({
@@ -209,7 +209,7 @@ describe('Keeper Rewards - Caps', () => {
       it('emits position liquidated event', async () => {
         await assertEvent(
           liquidateTxn,
-          `PositionLiquidated(2, 25, ${bn(100)}, 0)`,
+          `PositionLiquidated(2, 25, ${bn(0.01)}, 0)`,
           systems().PerpsMarket
         );
       });
