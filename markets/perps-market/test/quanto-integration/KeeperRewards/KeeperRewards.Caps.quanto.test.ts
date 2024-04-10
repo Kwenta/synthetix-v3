@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { bn, bootstrapMarkets } from '../../integration/bootstrap';
 import { snapshotCheckpoint } from '@synthetixio/core-utils/utils/mocha/snapshot';
-import { depositCollateral, openPosition } from '../../integration/helpers';
+import { depositCollateral, openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 
@@ -28,6 +28,12 @@ describe('Keeper Rewards - Caps', () => {
           token: 'snxETH',
           price: bn(1000),
           fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          quanto: {
+            name: 'Bitcoin',
+            token: 'BTC',
+            price: bn(10_000),
+            quantoSynthMarketIndex: 0,
+          },
         },
         {
           requestedMarketId: 30,
@@ -175,6 +181,10 @@ describe('Keeper Rewards - Caps', () => {
       });
 
       before('open position', async () => {
+        const quantoPositionSize = getQuantoPositionSize({
+          sizeInBaseAsset: bn(100),
+          quantoAssetPrice: bn(10_000),
+        });
         await openPosition({
           systems,
           provider,
@@ -182,7 +192,7 @@ describe('Keeper Rewards - Caps', () => {
           accountId: 2,
           keeper: keeper(),
           marketId: ethMarketId,
-          sizeDelta: bn(100),
+          sizeDelta: quantoPositionSize,
           settlementStrategyId: ethSettlementStrategyId,
           price: bn(1000),
         });

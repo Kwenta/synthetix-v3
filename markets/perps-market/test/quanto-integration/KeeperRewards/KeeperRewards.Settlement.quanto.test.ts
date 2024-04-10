@@ -32,6 +32,12 @@ describe('Keeper Rewards - Settlement', () => {
           token: 'snxETH',
           price: bn(1000),
           fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          quanto: {
+            name: 'Bitcoin',
+            token: 'BTC',
+            price: bn(10_000),
+            quantoSynthMarketIndex: 0,
+          },
         },
         {
           requestedMarketId: 30,

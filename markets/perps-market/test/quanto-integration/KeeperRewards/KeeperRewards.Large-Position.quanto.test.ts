@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { depositCollateral, openPosition } from '../../integration/helpers';
+import { depositCollateral, openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
@@ -32,6 +32,12 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
             takerFee: bn(0.003),
           },
           fundingParams: { skewScale: bn(1_000), maxFundingVelocity: bn(10) },
+          quanto: {
+            name: 'Bitcoin',
+            token: 'BTC',
+            price: bn(10_000),
+            quantoSynthMarketIndex: 0,
+          },
         },
       ],
       traderAccountIds: [2, 3],
@@ -124,6 +130,10 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
   });
 
   before('open position', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(201),
+      quantoAssetPrice: bn(10_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -131,7 +141,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
       accountId: 2,
       keeper: keeper(),
       marketId: ethMarketId,
-      sizeDelta: bn(201),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: ethSettlementStrategyId,
       price: bn(1000),
     });
