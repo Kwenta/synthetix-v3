@@ -15,7 +15,7 @@ describe('ModifyCollateral Withdraw', () => {
   const btcMarketIdBn = bn(btcMarketId).div(ONE_ETHER);
   const ethMarketId = 26;
   const ethMarketIdBn = bn(ethMarketId).div(ONE_ETHER);
-  const quantoSynthMarketIndex = 0;
+  const quantoSynthMarketIndex = 1;
 
   // Market Prices
   const btcPrice = bn(30_000);
