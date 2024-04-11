@@ -6,7 +6,7 @@ import {IMarketConfigurationModule} from "../interfaces/IMarketConfigurationModu
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol";
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
-import {QuantoUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {QuantoUint256, BaseQuantoPerUSDUint256, USDPerQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for updating configuration in relation to async order modules.
@@ -108,6 +108,8 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
         config.quantoSynthMarketId = quantoSynthMarketId;
+        // TODO: test this event
+        emit QuantoSynthMarketIdSet(marketId, quantoSynthMarketId);
     }
 
     /**
@@ -120,30 +122,6 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         return config.quantoSynthMarketId;
     }
 
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
-    function setQuantoFeedId(
-        uint128 perpsMarketId,
-        bytes32 quantoFeedId
-    ) external override {
-        OwnableStorage.onlyOwner();
-
-        PerpsPrice.load(perpsMarketId).updateQuantoFeedId(quantoFeedId);
-
-        // TODO: test this event
-        emit QuantoFeedIdSet(perpsMarketId, quantoFeedId);
-    }
-
-    /**
-     * @inheritdoc IMarketConfigurationModule
-     */
-    function getQuantoFeedId(
-        uint128 perpsMarketId
-    ) external view returns (bytes32 quantoFeedId) {
-        PerpsPrice.Data storage priceData = PerpsPrice.load(perpsMarketId);
-        quantoFeedId = priceData.quantoFeedId;
-    }
 
     /**
      * @inheritdoc IMarketConfigurationModule
