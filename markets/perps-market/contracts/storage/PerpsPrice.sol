@@ -59,8 +59,6 @@ library PerpsPrice {
     ) internal view returns (uint256 price) {
         Data storage self = load(marketId);
 
-
-
         bytes32 feedId;
         if (isQuanto) {
             PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
@@ -78,8 +76,6 @@ library PerpsPrice {
         } else {
             feedId = self.feedId;
         }
-
-
 
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
         NodeOutput.Data memory output;
