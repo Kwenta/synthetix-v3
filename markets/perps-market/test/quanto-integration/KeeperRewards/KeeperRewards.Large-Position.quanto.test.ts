@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { bn, bootstrapMarkets } from '../../integration/bootstrap';
 import { depositCollateral, openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
+import assert from 'assert/strict';
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
 
@@ -17,8 +18,8 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
         {
           name: 'Bitcoin',
           token: 'snxBTC',
-          buyPrice: bn(10_000),
-          sellPrice: bn(10_000),
+          buyPrice: bn(100),
+          sellPrice: bn(100),
         },
       ],
       perpsMarkets: [
@@ -26,16 +27,16 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
           requestedMarketId: 25,
           name: 'Ether',
           token: 'snxETH',
-          price: bn(1000),
+          price: bn(1_000),
           orderFees: {
             makerFee: bn(0.007),
             takerFee: bn(0.003),
           },
-          fundingParams: { skewScale: bn(1_000), maxFundingVelocity: bn(10) },
+          fundingParams: { skewScale: bn(10), maxFundingVelocity: bn(10) },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(10_000),
+            price: bn(100),
             quantoSynthMarketIndex: 0,
           },
         },
@@ -118,9 +119,9 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
       );
   });
   /**
-   * Based on the above configuration, the max liquidation amount for window == 100
+   * Based on the above configuration, the max liquidation amount for window == 1
    * * (maker + taker) * skewScale * secondsInWindow * multiplier
-   * * 0.01 * 1_000 * 10 * 1 = 100_000
+   * * 0.01 * 10 * 10 * 1 = 1_000
    */
 
   let latestLiquidationTime: number;
@@ -132,7 +133,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
   before('open position', async () => {
     const quantoPositionSize = getQuantoPositionSize({
       sizeInBaseAsset: bn(201),
-      quantoAssetPrice: bn(10_000),
+      quantoAssetPrice: bn(100),
     });
     await openPosition({
       systems,
@@ -143,7 +144,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
       marketId: ethMarketId,
       sizeDelta: quantoPositionSize,
       settlementStrategyId: ethSettlementStrategyId,
-      price: bn(1000),
+      price: bn(1_000),
     });
   });
 
@@ -151,17 +152,22 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
     await perpsMarkets()[0].aggregator().mockSetCurrentPrice(bn(1));
   });
 
+  it('can be liquidated', async () => {
+    const canLiquidate = await systems().PerpsMarket.connect(keeper()).canLiquidate(2);
+    assert.equal(canLiquidate, true, 'Account is not liquidatable');
+  });
+
   it('liquidate account - 1st step (100 of 201)', async () => {
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
 
-    // calls liquidate on the perps market, 1st step => will flag and will liquidate 100 of original 201
+    // calls liquidate on the perps market, 1st step => will flag and will liquidate 1 of original 2.01 (in quanto units)
     liquidateTxn = await systems().PerpsMarket.connect(keeper()).liquidate(2);
     latestLiquidationTime = await getTxTime(provider(), liquidateTxn);
 
     // emits position liquidated event
     await assertEvent(
       liquidateTxn,
-      `PositionLiquidated(2, 25, ${bn(100)}, ${bn(101)})`,
+      `PositionLiquidated(2, 25, ${bn(1)}, ${bn(1.01)})`,
       systems().PerpsMarket
     );
 
@@ -187,14 +193,14 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
 
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
 
-    // calls liquidate on the perps market, 2nd step => won't flag and will liquidate 100 of original 201
+    // calls liquidate on the perps market, 2nd step => won't flag and will liquidate 1 of original 2.01 (in quanto units)
     liquidateTxn = await systems().PerpsMarket.connect(keeper()).liquidate(2);
     latestLiquidationTime = await getTxTime(provider(), liquidateTxn);
 
     // emits position liquidated event
     await assertEvent(
       liquidateTxn,
-      `PositionLiquidated(2, 25, ${bn(100)}, ${bn(1)})`,
+      `PositionLiquidated(2, 25, ${bn(1)}, ${bn(0.01)})`,
       systems().PerpsMarket
     );
 
@@ -220,13 +226,13 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
 
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
 
-    // calls liquidate on the perps market, 3rd step => won't flag and will liquidate 1 of original 201
+    // calls liquidate on the perps market, 3rd step => won't flag and will liquidate 0.01 of original 2.01 (in quanto units)
     liquidateTxn = await systems().PerpsMarket.connect(keeper()).liquidate(2);
 
     // emits position liquidated event
     await assertEvent(
       liquidateTxn,
-      `PositionLiquidated(2, 25, ${bn(1)}, ${bn(0)})`,
+      `PositionLiquidated(2, 25, ${bn(0.01)}, ${bn(0)})`,
       systems().PerpsMarket
     );
 
