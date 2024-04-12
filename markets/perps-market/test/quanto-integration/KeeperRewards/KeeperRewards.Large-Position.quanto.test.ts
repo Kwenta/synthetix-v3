@@ -173,7 +173,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
     assert.equal(canLiquidate, true, 'Account is not liquidatable');
   });
 
-  it('liquidate account - 1st step (100 of 201)', async () => {
+  it('liquidate account - 1st step (1 of 2.01 in quanto units)', async () => {
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
 
     // calls liquidate on the perps market, 1st step => will flag and will liquidate 1 of original 2.01 (in quanto units)
@@ -204,7 +204,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
     );
   });
 
-  it('liquidate account - 2nd step (100 of 101)', async () => {
+  it('liquidate account - 2nd step (1 of 1.01 in quanto units)', async () => {
     await fastForwardTo(latestLiquidationTime + 35, provider());
 
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
@@ -237,7 +237,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
     );
   });
 
-  it('liquidate account - last step (1 of 1)', async () => {
+  it('liquidate account - last step 0.1 of 0.1 in quanto units)', async () => {
     await fastForwardTo(latestLiquidationTime + 35, provider());
 
     const initialKeeperBalance = await systems().USD.balanceOf(await keeper().getAddress());
