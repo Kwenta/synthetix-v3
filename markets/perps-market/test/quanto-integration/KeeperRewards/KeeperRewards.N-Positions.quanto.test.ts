@@ -5,6 +5,26 @@ import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber'
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 
 describe('Keeper Rewards - Multiple Positions', () => {
+  // Account and Market Identifiers
+  const accountIds = [2, 3];
+  const quantoSynthMarketIndex = 0;
+
+  // Market Prices
+  const btcPrice = bn(10_000);
+  const ethPrice = bn(1_000);
+  const linkPrice = bn(100);
+  const opPrice = bn(10);
+
+  // Skew Scales
+  const ethSkewScale = bn(100_000);
+  const linkSkewScale = bn(100_000);
+  const opSkewScale = bn(100_000);
+
+  // Margin and Funding Parameters
+  const ethMaxFundingVelocity = bn(10);
+  const linkMaxFundingVelocity = bn(10);
+  const opMaxFundingVelocity = bn(10);
+
   const KeeperCosts = {
     settlementCost: 1111,
     flagCost: 3333,
@@ -16,8 +36,8 @@ describe('Keeper Rewards - Multiple Positions', () => {
         {
           name: 'Bitcoin',
           token: 'snxBTC',
-          buyPrice: bn(10_000),
-          sellPrice: bn(10_000),
+          buyPrice: btcPrice,
+          sellPrice: btcPrice,
         },
       ],
       perpsMarkets: [
@@ -25,43 +45,43 @@ describe('Keeper Rewards - Multiple Positions', () => {
           requestedMarketId: 25,
           name: 'Ether',
           token: 'snxETH',
-          price: bn(1000),
-          fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          price: ethPrice,
+          fundingParams: { skewScale: ethSkewScale, maxFundingVelocity: ethMaxFundingVelocity },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(10_000),
-            quantoSynthMarketIndex: 0,
+            price: btcPrice,
+            quantoSynthMarketIndex: quantoSynthMarketIndex,
           },
         },
         {
           requestedMarketId: 30,
           name: 'Optimism',
           token: 'snxOP',
-          price: bn(10),
-          fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          price: opPrice,
+          fundingParams: { skewScale: opSkewScale, maxFundingVelocity: opMaxFundingVelocity },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(10_000),
-            quantoSynthMarketIndex: 0,
+            price: btcPrice,
+            quantoSynthMarketIndex: quantoSynthMarketIndex,
           },
         },
         {
           requestedMarketId: 35,
           name: 'Link',
           token: 'snxLINK',
-          price: bn(100),
-          fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          price: linkPrice,
+          fundingParams: { skewScale: linkSkewScale, maxFundingVelocity: linkMaxFundingVelocity },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(10_000),
-            quantoSynthMarketIndex: 0,
+            price: btcPrice,
+            quantoSynthMarketIndex: quantoSynthMarketIndex,
           },
         },
       ],
-      traderAccountIds: [2, 3],
+      traderAccountIds: accountIds,
     });
   let ethMarketId: ethers.BigNumber;
   let opMarketId: ethers.BigNumber;
@@ -150,15 +170,15 @@ describe('Keeper Rewards - Multiple Positions', () => {
   before('open positions', async () => {
     const quantoPositionSizeEthMarket = getQuantoPositionSize({
       sizeInBaseAsset: bn(100),
-      quantoAssetPrice: bn(10_000),
+      quantoAssetPrice: btcPrice,
     });
     const quantoPositionSizeOpMarket = getQuantoPositionSize({
       sizeInBaseAsset: bn(100),
-      quantoAssetPrice: bn(10_000),
+      quantoAssetPrice: btcPrice,
     });
     const quantoPositionSizeLinkMarket = getQuantoPositionSize({
       sizeInBaseAsset: bn(100),
-      quantoAssetPrice: bn(10_000),
+      quantoAssetPrice: btcPrice,
     });
     await openPosition({
       systems,
@@ -169,7 +189,7 @@ describe('Keeper Rewards - Multiple Positions', () => {
       marketId: ethMarketId,
       sizeDelta: quantoPositionSizeEthMarket,
       settlementStrategyId: ethSettlementStrategyId,
-      price: bn(1000),
+      price: ethPrice,
     });
     await openPosition({
       systems,
@@ -180,7 +200,7 @@ describe('Keeper Rewards - Multiple Positions', () => {
       marketId: opMarketId,
       sizeDelta: quantoPositionSizeOpMarket,
       settlementStrategyId: ethSettlementStrategyId,
-      price: bn(10),
+      price: opPrice,
     });
     await openPosition({
       systems,
@@ -191,7 +211,7 @@ describe('Keeper Rewards - Multiple Positions', () => {
       marketId: linkMarketId,
       sizeDelta: quantoPositionSizeLinkMarket,
       settlementStrategyId: ethSettlementStrategyId,
-      price: bn(100),
+      price: linkPrice,
     });
   });
 

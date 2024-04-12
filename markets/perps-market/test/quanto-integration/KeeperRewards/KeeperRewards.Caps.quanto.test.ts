@@ -6,6 +6,24 @@ import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber'
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 
 describe('Keeper Rewards - Caps', () => {
+  // Account and Market Identifiers
+  const accountIds = [2, 3];
+  const linkMarketId = 30;
+  const quantoSynthMarketIndex = 0;
+
+  // Market Prices
+  const btcPrice = bn(10_000);
+  const ethPrice = bn(1_000);
+  const linkPrice = bn(5_000);
+
+  // Skew Scales
+  const ethSkewScale = bn(100_000);
+  const linkSkewScale = bn(200_000);
+
+  // Margin and Funding Parameters
+  const ethMaxFundingVelocity = bn(10);
+  const linkMaxFundingVelocity = bn(20);
+
   const KeeperCosts = {
     settlementCost: 1111,
     flagCost: 3333,
@@ -17,8 +35,8 @@ describe('Keeper Rewards - Caps', () => {
         {
           name: 'Bitcoin',
           token: 'snxBTC',
-          buyPrice: bn(10_000),
-          sellPrice: bn(10_000),
+          buyPrice: btcPrice,
+          sellPrice: btcPrice,
         },
       ],
       perpsMarkets: [
@@ -26,24 +44,24 @@ describe('Keeper Rewards - Caps', () => {
           requestedMarketId: 25,
           name: 'Ether',
           token: 'snxETH',
-          price: bn(1000),
-          fundingParams: { skewScale: bn(100_000), maxFundingVelocity: bn(10) },
+          price: ethPrice,
+          fundingParams: { skewScale: ethSkewScale, maxFundingVelocity: ethMaxFundingVelocity },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(10_000),
-            quantoSynthMarketIndex: 0,
+            price: btcPrice,
+            quantoSynthMarketIndex: quantoSynthMarketIndex,
           },
         },
         {
-          requestedMarketId: 30,
+          requestedMarketId: linkMarketId,
           name: 'Link',
           token: 'snxLINK',
-          price: bn(5000),
-          fundingParams: { skewScale: bn(200_000), maxFundingVelocity: bn(20) },
+          price: linkPrice,
+          fundingParams: { skewScale: linkSkewScale, maxFundingVelocity: linkMaxFundingVelocity },
         },
       ],
-      traderAccountIds: [2, 3],
+      traderAccountIds: accountIds,
     });
   let ethMarketId: ethers.BigNumber;
   let ethSettlementStrategyId: ethers.BigNumber;
@@ -182,8 +200,8 @@ describe('Keeper Rewards - Caps', () => {
 
       before('open position', async () => {
         const quantoPositionSize = getQuantoPositionSize({
-          sizeInBaseAsset: bn(100), // sizeDelta of the normal perps test
-          quantoAssetPrice: bn(10_000),
+          sizeInBaseAsset: bn(100),
+          quantoAssetPrice: btcPrice,
         });
         await openPosition({
           systems,
@@ -194,7 +212,7 @@ describe('Keeper Rewards - Caps', () => {
           marketId: ethMarketId,
           sizeDelta: quantoPositionSize,
           settlementStrategyId: ethSettlementStrategyId,
-          price: bn(1000),
+          price: ethPrice,
         });
       });
 

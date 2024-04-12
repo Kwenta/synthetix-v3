@@ -7,6 +7,22 @@ import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber'
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
 
 describe('Keeper Rewards - Multiple Liquidation steps', () => {
+  // Account and Market Identifiers
+  const accountIds = [2, 3];
+  const quantoSynthMarketIndex = 0;
+
+  // Market Prices
+  const btcPrice = bn(100);
+  const ethPrice = bn(1_000);
+
+  // Skew Scales
+  const ethSkewScale = bn(10);
+
+  // Margin and Funding Parameters
+  const ethMaxFundingVelocity = bn(10);
+  const ethMakerFee = bn(0.007);
+  const ethTakerFee = bn(0.003);
+
   const KeeperCosts = {
     settlementCost: 1111,
     flagCost: 3333,
@@ -18,8 +34,8 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
         {
           name: 'Bitcoin',
           token: 'snxBTC',
-          buyPrice: bn(100),
-          sellPrice: bn(100),
+          buyPrice: btcPrice,
+          sellPrice: btcPrice,
         },
       ],
       perpsMarkets: [
@@ -27,21 +43,21 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
           requestedMarketId: 25,
           name: 'Ether',
           token: 'snxETH',
-          price: bn(1_000),
+          price: ethPrice,
           orderFees: {
-            makerFee: bn(0.007),
-            takerFee: bn(0.003),
+            makerFee: ethMakerFee,
+            takerFee: ethTakerFee,
           },
-          fundingParams: { skewScale: bn(10), maxFundingVelocity: bn(10) },
+          fundingParams: { skewScale: ethSkewScale, maxFundingVelocity: ethMaxFundingVelocity },
           quanto: {
             name: 'Bitcoin',
             token: 'BTC',
-            price: bn(100),
-            quantoSynthMarketIndex: 0,
+            price: btcPrice,
+            quantoSynthMarketIndex: quantoSynthMarketIndex,
           },
         },
       ],
-      traderAccountIds: [2, 3],
+      traderAccountIds: accountIds,
     });
   let ethMarketId: ethers.BigNumber;
   let ethSettlementStrategyId: ethers.BigNumber;
@@ -133,7 +149,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
   before('open position', async () => {
     const quantoPositionSize = getQuantoPositionSize({
       sizeInBaseAsset: bn(201),
-      quantoAssetPrice: bn(100),
+      quantoAssetPrice: btcPrice,
     });
     await openPosition({
       systems,
@@ -144,7 +160,7 @@ describe('Keeper Rewards - Multiple Liquidation steps', () => {
       marketId: ethMarketId,
       sizeDelta: quantoPositionSize,
       settlementStrategyId: ethSettlementStrategyId,
-      price: bn(1_000),
+      price: ethPrice,
     });
   });
 
