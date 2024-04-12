@@ -1,7 +1,11 @@
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import assert from 'assert';
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { createAccountAndOpenPosition, openPosition } from '../../integration/helpers';
+import {
+  createAccountAndOpenPosition,
+  openPosition,
+  getQuantoPositionSize,
+} from '../../integration/helpers';
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
 import { snapshotCheckpoint } from '@synthetixio/core-utils/utils/mocha/snapshot';
 import { ethers } from 'ethers';
@@ -76,6 +80,14 @@ describe('Liquidation - flaggedLiquidation', () => {
   });
 
   before('open position and balance skew', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(150),
+      quantoAssetPrice: bn(1_000),
+    });
+    const quantoPositionSize2 = getQuantoPositionSize({
+      sizeInBaseAsset: bn(-150),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -83,7 +95,7 @@ describe('Liquidation - flaggedLiquidation', () => {
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(150),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -96,7 +108,7 @@ describe('Liquidation - flaggedLiquidation', () => {
       accountId: 4,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(-150),
+      sizeDelta: quantoPositionSize2,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -106,6 +118,15 @@ describe('Liquidation - flaggedLiquidation', () => {
     for (let i = 0; i < trader2AccountIds.length; i++) {
       const id = trader2AccountIds[i];
 
+      const quantoPositionSize = getQuantoPositionSize({
+        sizeInBaseAsset: bn(150),
+        quantoAssetPrice: bn(1_000),
+      });
+      const quantoPositionSize2 = getQuantoPositionSize({
+        sizeInBaseAsset: bn(-150),
+        quantoAssetPrice: bn(1_000),
+      });
+
       await createAccountAndOpenPosition({
         systems,
         provider,
@@ -113,7 +134,7 @@ describe('Liquidation - flaggedLiquidation', () => {
         accountId: id,
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
-        sizeDelta: bn(150),
+        sizeDelta: quantoPositionSize,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(10),
         collateral: bn(1500),
@@ -127,7 +148,7 @@ describe('Liquidation - flaggedLiquidation', () => {
         accountId: id + 100,
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
-        sizeDelta: bn(-150),
+        sizeDelta: quantoPositionSize2,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(10),
         collateral: bn(1500),
@@ -136,7 +157,7 @@ describe('Liquidation - flaggedLiquidation', () => {
   });
 
   before('lower price to liquidation', async () => {
-    await perpsMarket.aggregator().mockSetCurrentPrice(bn(1));
+    await perpsMarket.aggregator().mockSetCurrentPrice(bn(0.01));
   });
 
   /**
@@ -167,6 +188,9 @@ describe('Liquidation - flaggedLiquidation', () => {
 
   describe('when a large account is liquidated/flagged', () => {
     before('call liquidate on first account to use the availability', async () => {
+      const canLiquidate = await systems().PerpsMarket.connect(keeper()).canLiquidate(2);
+      assert.equal(canLiquidate, true, 'Account is not liquidatable');
+
       const tx = await systems().PerpsMarket.connect(keeper()).liquidate(2);
       initialLiquidationTime = await getTxTime(provider(), tx);
     });
