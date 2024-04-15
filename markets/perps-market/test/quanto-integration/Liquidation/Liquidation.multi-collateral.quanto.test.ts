@@ -1,6 +1,11 @@
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import { bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { OpenPositionData, depositCollateral, openPosition } from '../../integration/helpers';
+import {
+  OpenPositionData,
+  depositCollateral,
+  openPosition,
+  getQuantoPositionSize,
+} from '../../integration/helpers';
 import { SynthMarkets } from '@synthetixio/spot-market/test/common';
 import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 import { ethers } from 'ethers';
@@ -165,9 +170,18 @@ describe('Liquidation - multi collateral', () => {
 
   before('open positions', async () => {
     const positionSizes = [
-      bn(-1), // btc short
-      bn(20), // eth long
-      bn(2000), // link long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(-1),
+        quantoAssetPrice: bn(1_000),
+      }), // btc short
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(20),
+        quantoAssetPrice: bn(1_000),
+      }), // eth long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(2000),
+        quantoAssetPrice: bn(1_000),
+      }), // link long
     ];
 
     for (const [i, perpsMarket] of perpsMarkets().entries()) {
@@ -323,6 +337,10 @@ describe('Liquidation - multi collateral', () => {
     });
 
     before('open new position', async () => {
+      const quantoPositionSize = getQuantoPositionSize({
+        sizeInBaseAsset: bn(-1),
+        quantoAssetPrice: bn(1_000),
+      });
       await openPosition({
         systems,
         provider,
@@ -330,7 +348,7 @@ describe('Liquidation - multi collateral', () => {
         accountId: 2,
         keeper: trader1(),
         marketId: perpsMarkets()[0].marketId(),
-        sizeDelta: bn(-1),
+        sizeDelta: quantoPositionSize,
         settlementStrategyId: perpsMarkets()[0].strategyId(),
         price: perpsMarketConfigs[0].price,
       });

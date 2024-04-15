@@ -1,7 +1,7 @@
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import assertRevert from '@synthetixio/core-utils/utils/assertions/assert-revert';
 import { bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { OpenPositionData, openPosition } from '../../integration/helpers';
+import { OpenPositionData, openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import { snapshotCheckpoint } from '@synthetixio/core-utils/utils/mocha/snapshot';
 import { ethers } from 'ethers';
 import assert from 'assert/strict';
@@ -168,11 +168,26 @@ describe('Liquidation - margin', () => {
 
   before('open positions', async () => {
     const positionSizes = [
-      bn(-1), // btc short
-      bn(20), // eth long
-      bn(2000), // link long
-      bn(5000), // arb long
-      bn(5000), // op long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(-1),
+        quantoAssetPrice: bn(1_000),
+      }), // btc short
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(20),
+        quantoAssetPrice: bn(1_000),
+      }), // eth long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(2000),
+        quantoAssetPrice: bn(1_000),
+      }), // link long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(5000),
+        quantoAssetPrice: bn(1_000),
+      }), // arb long
+      getQuantoPositionSize({
+        sizeInBaseAsset: bn(5000),
+        quantoAssetPrice: bn(1_000),
+      }), // op long
     ];
 
     for (const [i, perpsMarket] of perpsMarkets().entries()) {

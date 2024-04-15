@@ -1,6 +1,6 @@
 import { BigNumber } from 'ethers';
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { openPosition } from '../../integration/helpers';
+import { openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertBn from '@synthetixio/core-utils/src/utils/assertions/assert-bignumber';
 
 describe('Liquidation - endorsed liquidator', () => {
@@ -59,6 +59,10 @@ describe('Liquidation - endorsed liquidator', () => {
   });
 
   before('open position', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(90),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -66,7 +70,7 @@ describe('Liquidation - endorsed liquidator', () => {
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(90),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });

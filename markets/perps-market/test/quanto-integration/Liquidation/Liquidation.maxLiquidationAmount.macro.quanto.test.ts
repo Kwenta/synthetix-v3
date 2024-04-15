@@ -1,6 +1,6 @@
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { openPosition } from '../../integration/helpers';
+import { openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertBn from '@synthetixio/core-utils/src/utils/assertions/assert-bignumber';
 import { ethers } from 'ethers';
 
@@ -60,6 +60,14 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
   });
 
   before('open position', async () => {
+    const quantoPositionSize1 = getQuantoPositionSize({
+      sizeInBaseAsset: bn(100),
+      quantoAssetPrice: bn(1_000),
+    });
+    const quantoPositionSize2 = getQuantoPositionSize({
+      sizeInBaseAsset: bn(300),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -67,7 +75,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(100),
+      sizeDelta: quantoPositionSize1,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -78,7 +86,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
       accountId: 3,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(300),
+      sizeDelta: quantoPositionSize2,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -91,6 +99,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
   /**
    * Based on the above configuration, the max liquidation amount for window == 300
    * * (maker + taker) * skewScale * secondsInWindow * multiplier
+   * 0.01 * 1000 * 30 * 1 = 300
    */
 
   let initialLiquidationTime: number;
@@ -101,7 +110,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
       initialLiquidationTime = await getTxTime(provider(), tx);
     });
 
-    it('liquidated all 100 OP', async () => {
+    it('liquidated all 100 OP (in quanto units)', async () => {
       const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
       assertBn.equal(size, bn(0));
     });
@@ -113,6 +122,10 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
     before('setup previous position', async () => {
       await perpsMarket.aggregator().mockSetCurrentPrice(bn(10));
       await systems().PerpsMarket.connect(trader1()).modifyCollateral(2, 0, bn(90));
+      const quantoPositionSize1 = getQuantoPositionSize({
+        sizeInBaseAsset: bn(10),
+        quantoAssetPrice: bn(1_000),
+      });
       await openPosition({
         systems,
         provider,
@@ -121,7 +134,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
         // make size delta smaller
-        sizeDelta: bn(10),
+        sizeDelta: quantoPositionSize1,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(10),
       });
@@ -153,6 +166,10 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
     before('setup previous position', async () => {
       await perpsMarket.aggregator().mockSetCurrentPrice(bn(10));
       await systems().PerpsMarket.connect(trader1()).modifyCollateral(2, 0, bn(90));
+      const quantoPositionSize1 = getQuantoPositionSize({
+        sizeInBaseAsset: bn(10),
+        quantoAssetPrice: bn(1_000),
+      });
       await openPosition({
         systems,
         provider,
@@ -161,7 +178,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
         // make size delta smaller
-        sizeDelta: bn(10),
+        sizeDelta: quantoPositionSize1,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(10),
       });
@@ -193,6 +210,10 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
     before('setup previous position', async () => {
       await perpsMarket.aggregator().mockSetCurrentPrice(bn(10));
       await systems().PerpsMarket.connect(trader1()).modifyCollateral(2, 0, bn(90));
+      const quantoPositionSize1 = getQuantoPositionSize({
+        sizeInBaseAsset: bn(10),
+        quantoAssetPrice: bn(1_000),
+      });
       await openPosition({
         systems,
         provider,
@@ -201,7 +222,7 @@ describe('Liquidation - max liquidatable amount with multiple continuing liquida
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
         // make size delta smaller
-        sizeDelta: bn(10),
+        sizeDelta: quantoPositionSize1,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(10),
       });

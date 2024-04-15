@@ -1,5 +1,5 @@
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { openPosition } from '../../integration/helpers';
+import { openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertRevert from '@synthetixio/core-utils/utils/assertions/assert-revert';
 import { ethers } from 'ethers';
 
@@ -57,6 +57,10 @@ describe('Liquidation - with correct staleness tolerance', async () => {
   });
 
   before('open position', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(150),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -64,7 +68,7 @@ describe('Liquidation - with correct staleness tolerance', async () => {
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(150),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });

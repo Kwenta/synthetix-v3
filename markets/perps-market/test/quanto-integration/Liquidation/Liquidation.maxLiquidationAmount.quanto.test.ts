@@ -1,6 +1,6 @@
 import assertBn from '@synthetixio/core-utils/utils/assertions/assert-bignumber';
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { openPosition } from '../../integration/helpers';
+import { openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import { fastForwardTo, getTxTime } from '@synthetixio/core-utils/utils/hardhat/rpc';
 import { ethers } from 'ethers';
 
@@ -65,6 +65,10 @@ describe('Liquidation - max liquidatable amount', () => {
   });
 
   before('open position', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(150),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -72,7 +76,7 @@ describe('Liquidation - max liquidatable amount', () => {
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(150),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -83,7 +87,7 @@ describe('Liquidation - max liquidatable amount', () => {
       accountId: 3,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(150),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });

@@ -1,6 +1,6 @@
 import { BigNumber, ethers } from 'ethers';
 import { PerpsMarket, bn, bootstrapMarkets } from '../../integration/bootstrap';
-import { openPosition } from '../../integration/helpers';
+import { openPosition, getQuantoPositionSize } from '../../integration/helpers';
 import assertBn from '@synthetixio/core-utils/src/utils/assertions/assert-bignumber';
 
 describe('Liquidation - max pd', () => {
@@ -28,7 +28,7 @@ describe('Liquidation - max pd', () => {
           initialMarginFraction: bn(3),
           minimumInitialMarginRatio: bn(0),
           maintenanceMarginScalar: bn(0.66),
-          maxLiquidationLimitAccumulationMultiplier: bn(0.25),
+          maxLiquidationLimitAccumulationMultiplier: bn(0.00025),
           liquidationRewardRatio: bn(0.05),
           // time window 10 seconds
           maxSecondsInLiquidationWindow: BigNumber.from(10),
@@ -59,6 +59,10 @@ describe('Liquidation - max pd', () => {
   });
 
   before('open position', async () => {
+    const quantoPositionSize = getQuantoPositionSize({
+      sizeInBaseAsset: bn(90),
+      quantoAssetPrice: bn(1_000),
+    });
     await openPosition({
       systems,
       provider,
@@ -66,7 +70,7 @@ describe('Liquidation - max pd', () => {
       accountId: 2,
       keeper: keeper(),
       marketId: perpsMarket.marketId(),
-      sizeDelta: bn(90),
+      sizeDelta: quantoPositionSize,
       settlementStrategyId: perpsMarket.strategyId(),
       price: bn(10),
     });
@@ -77,17 +81,18 @@ describe('Liquidation - max pd', () => {
   });
 
   /**
-   * Based on the above configuration, the max liquidation amount for window == 25
+   * Based on the above configuration, the max liquidation amount for window == 0.025
    * * (maker + taker) * skewScale * secondsInWindow * multiplier
+   * 0.01 * 1000 * 10 * 0.00025 = 0.025
    */
   describe('without max pd set', () => {
     before('call liquidate', async () => {
       await systems().PerpsMarket.connect(keeper()).liquidate(2);
     });
 
-    it('liquidated 25 OP', async () => {
+    it('liquidated 0.025 OP*ETH/USD', async () => {
       const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
-      assertBn.equal(size, bn(65));
+      assertBn.equal(size, bn(0.065));
     });
 
     describe('call liquidate again', () => {
@@ -96,23 +101,23 @@ describe('Liquidation - max pd', () => {
       });
       it('liquidates no more OP', async () => {
         const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
-        assertBn.equal(size, bn(65));
+        assertBn.equal(size, bn(0.065));
       });
     });
   });
 
   /**
    * Scenario
-   * Trader 1 position left to be liquidated = 75
-   * maxPD set to 0.06 so under 60 OP skew is required for more liquidation otherwise trader has to wait for window to be liquidated
-   * Trader 2 opens position which moves skew under 60 OP
-   * Trader 1 can now be liquidated again by 25 OP
+   * Trader 1 position left to be liquidated = 0.065 OP*ETH/USD
+   * maxPD set to 0.06 so under 60 OP skew (in base units) is required for more liquidation otherwise trader has to wait for window to be liquidated
+   * Trader 2 opens position which moves skew under 60 OP (in base units)
+   * Trader 1 can now be liquidated again by 0.025 OP*ETH/USD
    */
   describe('with max pd', () => {
     before('set max pd', async () => {
       await systems().PerpsMarket.connect(owner()).setMaxLiquidationParameters(
         perpsMarket.marketId(),
-        bn(0.25),
+        bn(0.00025),
         BigNumber.from(10),
         bn(0.06), // 60 OP maxPD
         ethers.constants.AddressZero
@@ -120,6 +125,10 @@ describe('Liquidation - max pd', () => {
     });
 
     before('trader 2 arbs', async () => {
+      const quantoPositionSize = getQuantoPositionSize({
+        sizeInBaseAsset: bn(-25),
+        quantoAssetPrice: bn(1_000),
+      });
       await openPosition({
         systems,
         provider,
@@ -127,7 +136,7 @@ describe('Liquidation - max pd', () => {
         accountId: 3,
         keeper: keeper(),
         marketId: perpsMarket.marketId(),
-        sizeDelta: bn(-25),
+        sizeDelta: quantoPositionSize,
         settlementStrategyId: perpsMarket.strategyId(),
         price: bn(1),
       });
@@ -137,9 +146,9 @@ describe('Liquidation - max pd', () => {
       await systems().PerpsMarket.connect(keeper()).liquidate(2);
     });
 
-    it('liquidated 25 OP more', async () => {
+    it('liquidated 0.025 OP*ETH/USD more', async () => {
       const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
-      assertBn.equal(size, bn(40));
+      assertBn.equal(size, bn(0.04));
     });
   });
 
@@ -158,9 +167,9 @@ describe('Liquidation - max pd', () => {
         ]);
       });
 
-      it('liquidated 25 OP more', async () => {
+      it('liquidated 0.025 OP*ETH/USD more', async () => {
         const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
-        assertBn.equal(size, bn(15));
+        assertBn.equal(size, bn(0.015));
       });
     });
 
@@ -169,7 +178,7 @@ describe('Liquidation - max pd', () => {
         await systems().PerpsMarket.connect(keeper()).liquidate(2);
       });
 
-      it('liquidated 25 OP more', async () => {
+      it('liquidated 0.025 OP*ETH/USD more', async () => {
         const [, , size] = await systems().PerpsMarket.getOpenPosition(2, perpsMarket.marketId());
         assertBn.equal(size, bn(0));
       });
@@ -185,8 +194,8 @@ describe('Liquidation - max pd', () => {
       await systems().PerpsMarket.connect(keeper()).liquidate(3);
     });
 
-    // because the previous liquidation of trader 1 was of 15 OP, the remaining amount that can be liquidated is 10 OP
-    it('liquidated all 10 OP', async () => {
+    // because the previous liquidation of trader 1 was of 0.015 OP, the remaining amount that can be liquidated is 0.010 OP
+    it('liquidated all 0.010 OP', async () => {
       const [, , size] = await systems().PerpsMarket.getOpenPosition(3, perpsMarket.marketId());
       assertBn.equal(size, 0);
     });
