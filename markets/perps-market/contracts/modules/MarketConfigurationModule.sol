@@ -95,9 +95,6 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         emit OrderFeesSet(marketId, makerFeeRatio, takerFeeRatio);
     }
 
-    // TODO: potentially update how this is set
-    // It may be better that setQuantoFeedId is updated in the same function call?
-    // There should be some way to ensure that both or neither are set, and that they match up
     /**
      * @inheritdoc IMarketConfigurationModule
      */
@@ -108,7 +105,6 @@ contract MarketConfigurationModule is IMarketConfigurationModule {
         OwnableStorage.onlyOwner();
         PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
         config.quantoSynthMarketId = quantoSynthMarketId;
-        // TODO: test this event
         emit QuantoSynthMarketIdSet(marketId, quantoSynthMarketId);
     }
 
