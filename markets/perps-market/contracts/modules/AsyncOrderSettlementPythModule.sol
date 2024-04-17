@@ -2,9 +2,12 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
+import {Price} from "@synthetixio/spot-market/contracts/storage/Price.sol";
 import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFlag.sol";
 import {IAsyncOrderSettlementPythModule} from "../interfaces/IAsyncOrderSettlementPythModule.sol";
-import {PerpsAccount} from "../storage/PerpsAccount.sol";
+import {ISpotMarketSystem} from "../interfaces/external/ISpotMarketSystem.sol";
+import {ITokenModule} from "@synthetixio/core-modules/contracts/interfaces/ITokenModule.sol";
+import {PerpsAccount, SNX_USD_MARKET_ID} from "../storage/PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
 import {PerpsMarket} from "../storage/PerpsMarket.sol";
@@ -21,7 +24,7 @@ import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
-import {USDUint256, USDPerBaseUint256, QuantoUint256, QuantoInt256, USDPerQuantoUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {USDPerBaseUint256, QuantoUint256, QuantoInt256, USDPerQuantoUint256, InteractionsQuantoUint256, InteractionsQuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for settling async orders using pyth as price feed.
@@ -99,7 +102,40 @@ contract AsyncOrderSettlementPythModule is
             PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
                 runtime.marketId
             );
-            perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
+            uint128 quantoSynthMarketId = marketConfig.quantoSynthMarketId;
+            perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
+
+            if (quantoSynthMarketId != SNX_USD_MARKET_ID) {
+                // get cost of trader quanto synth winnings in the spot market
+                ISpotMarketSystem spotMarket = factory.spotMarket;
+                (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
+                    quantoSynthMarketId,
+                    runtime.pnl.unwrap().toUint(),
+                    Price.Tolerance.DEFAULT // TODO: check correct price tolerance
+                );
+
+                // borrow sUSD from the pool needed to buy quanto synths
+                factory.synthetix.withdrawMarketUsd(
+                    factory.perpsMarketId,
+                    address(this),
+                    costOfSynthInUSD
+                );
+
+                // buy the quanto synths needed to payout the trader
+                factory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
+                spotMarket.buyExactOut(
+                    quantoSynthMarketId,
+                    runtime.pnl.unwrap().toUint(),
+                    costOfSynthInUSD,
+                    address(0)
+                );
+
+                ITokenModule synth = ITokenModule(
+                    spotMarket.getSynth(quantoSynthMarketId)
+                );
+                // depositing quanto synth into market collateral, ready for later withdrawal by trader
+                factory.depositMarketCollateral(synth, runtime.pnl.unwrap().toUint());
+            }
         } else if (runtime.pnl.lessThanZero()) {
             USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
             runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);

@@ -47,9 +47,9 @@ interface IMarketConfigurationModule {
     /**
      * @notice Gets fired when quanto feed id for perps market is updated.
      * @param perpsMarketId id of perps market
-     * @param quantoFeedId oracle node id for quanto feed
+     * @param quantoSynthMarketId oracle node id for quanto feed
      */
-    event QuantoFeedIdSet(uint128 indexed perpsMarketId, bytes32 quantoFeedId);
+    event QuantoSynthMarketIdSet(uint128 indexed perpsMarketId, uint128 quantoSynthMarketId);
 
     /**
      * @notice Gets fired when order fees are updated.
@@ -172,14 +172,13 @@ interface IMarketConfigurationModule {
     ) external;
 
     /**
-     * @notice Set quanto node id for perps market
-     * @param perpsMarketId id of the market to set price feed.
-     * @param quantoFeedId the node feed id for quanto asset
-     * @dev if the quantoFeedId is not set, the market defaults to acting as a classic perps market
+     * @notice Set the quanto synth market id for a perps market
+     * @param marketId id of the market to set the quanto synth market id.
+     * @param quantoSynthMarketId the id of the quanto synth market
      */
-    function setQuantoFeedId(
-        uint128 perpsMarketId,
-        bytes32 quantoFeedId
+    function setQuantoSynthMarket(
+        uint128 marketId,
+        uint128 quantoSynthMarketId
     ) external;
 
     /**
@@ -367,11 +366,11 @@ interface IMarketConfigurationModule {
     ) external view returns (bytes32 feedId, uint256 strictStalenessTolerance);
 
     /**
-     * @notice Gets the quanto feed id for a specific perps market.
-     * @param perpsMarketId id of perps market
-     * @return quantoFeedId oracle node id for quanto feed
-     */ 
-     function getQuantoFeedId(
-         uint128 perpsMarketId
-     ) external view returns (bytes32 quantoFeedId);
+     * @notice Gets the quanto synth market id for a specific perps market.
+     * @param marketId id of perps market
+     * @return quantoSynthMarketId id of the quanto synth market
+     */
+    function getQuantoSynthMarket(
+        uint128 marketId
+    ) external view returns (uint128 quantoSynthMarketId);
 }

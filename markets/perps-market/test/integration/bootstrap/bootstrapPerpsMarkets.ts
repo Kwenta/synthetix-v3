@@ -8,7 +8,6 @@ import { bootstrapSynthMarkets } from '@synthetixio/spot-market/test/common';
 export type PerpsMarket = {
   marketId: () => ethers.BigNumber;
   aggregator: () => MockPythExternalNode;
-  quantoAggregator: () => MockPythExternalNode;
   strategyId: () => ethers.BigNumber;
 };
 
@@ -119,11 +118,9 @@ export const bootstrapPerpsMarkets = (
       maxMarketSize,
       maxMarketValue,
       lockedOiRatioD18,
-      settlementStrategy,
-      quanto,
+      settlementStrategy
     }) => {
       let oracleNodeId: string, aggregator: MockPythExternalNode;
-      let quantoOracleNodeId: string, quantoAggregator: MockPythExternalNode;
       before('create perps price nodes', async () => {
         const results = await createPythNode(r.owner(), price, contracts.OracleManager);
         oracleNodeId = results.oracleNodeId;
@@ -138,21 +135,6 @@ export const bootstrapPerpsMarkets = (
           STRICT_PRICE_TOLERANCE
         );
       });
-      
-      if (quanto) {
-        before('create perps quanto price nodes', async () => {
-          const results = await createPythNode(r.owner(), quanto.price, contracts.OracleManager);
-          quantoOracleNodeId = results.oracleNodeId;
-          quantoAggregator = results.aggregator;
-        });
-
-        before('set quanto feed id', async () => {
-          await contracts.PerpsMarket.connect(r.owner()).setQuantoFeedId(
-            marketId,
-            quantoOracleNodeId
-          );
-        });
-      }
 
       before('set funding parameters', async () => {
         await contracts.PerpsMarket.connect(r.owner()).setFundingParameters(
@@ -232,7 +214,6 @@ export const bootstrapPerpsMarkets = (
       return {
         marketId: () => (isNumber(marketId) ? ethers.BigNumber.from(marketId) : marketId),
         aggregator: () => aggregator,
-        quantoAggregator: () => quantoAggregator,
         strategyId: () => strategyId,
       };
     }

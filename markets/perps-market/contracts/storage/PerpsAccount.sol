@@ -593,7 +593,6 @@ library PerpsAccount {
         updateOpenPositions(self, marketId, newPositionSize);
 
         // update market data
-        // TODO: ensure stuff going in here is correct
         marketUpdateData = perpsMarket.updatePositionData(self.id, newPosition);
         sizeDelta = newPositionSize - oldPositionSize;
 

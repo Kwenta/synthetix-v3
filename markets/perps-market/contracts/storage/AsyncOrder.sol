@@ -12,7 +12,7 @@ import {PerpsAccount} from "./PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {OrderFee} from "./OrderFee.sol";
 import {KeeperCosts} from "./KeeperCosts.sol";
-import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerBaseUint128, USDPerQuantoUint256, USDPerQuantoInt256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDInt256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, BaseQuantoPerUSDUint256, USDPerBaseUint256, USDPerQuantoUint256, USDPerBaseInt256, QuantoUint256, QuantoInt256, USDInt256, USDUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsBaseQuantoPerUSDInt256, InteractionsUSDPerBaseUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsUSDUint256, InteractionsUSDPerQuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsUSDInt256, InteractionsUSDPerBaseInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Async order top level data storage
@@ -237,8 +237,6 @@ library AsyncOrder {
     /**
      * @dev Struct used internally in validateOrder() to prevent stack too deep error.
      */
-    // TODO: check to be sure commented out types can definitely be deleted safely
-    // TODO: if they can be deleted safely, delete them
     struct SimulateDataRuntime {
         bool isEligible;
         BaseQuantoPerUSDInt128 sizeDelta;
@@ -246,15 +244,11 @@ library AsyncOrder {
         uint128 marketId;
         USDPerBaseUint256 fillPrice;
         USDUint256 orderFees;
-        // uint256 availableMargin;
-        // uint256 currentLiquidationMargin;
         uint256 accumulatedLiquidationRewards;
         USDUint256 currentLiquidationReward;
         BaseQuantoPerUSDInt128 newPositionSize;
-        // uint256 newNotionalValue;
         USDInt256 currentAvailableMargin;
         USDUint256 requiredInitialMargin;
-        // uint256 initialRequiredMargin;
         USDUint256 totalRequiredMargin;
         Position.Data newPosition;
         bytes32 trackingCode;

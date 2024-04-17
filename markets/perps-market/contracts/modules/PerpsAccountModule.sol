@@ -255,58 +255,15 @@ contract PerpsAccountModule is IPerpsAccountModule {
                 amount
             );
         } else {
-            ISpotMarketSystem spotMarket = perpsMarketFactory.spotMarket;
             ITokenModule synth = ITokenModule(
-                spotMarket.getSynth(synthMarketId)
+                perpsMarketFactory.spotMarket.getSynth(synthMarketId)
             );
-
-            uint256 collateralAmount = perpsMarketFactory.synthetix.getMarketCollateralAmount(
+            // withdrawing from a synth market
+            perpsMarketFactory.synthetix.withdrawMarketCollateral(
                 perpsMarketId,
-                address(synth)
+                address(synth),
+                amount
             );
-
-            // can withdraw all the payout from the markets collateral directly
-            if (collateralAmount >= amount) {
-                // withdraw this markets trader deposited synth collateral
-                perpsMarketFactory.synthetix.withdrawMarketCollateral(
-                    perpsMarketId,
-                    address(synth),
-                    amount
-                );
-            } else {
-                // TODO: potentially move this logic to the position settlement, instead of withdrawal time
-                // withdraw all available market collateral
-                perpsMarketFactory.synthetix.withdrawMarketCollateral(
-                    perpsMarketId,
-                    address(synth),
-                    collateralAmount
-                );
-
-                // workout how much sUSD is needed to buy the remaining synths
-                uint256 amountOfSynthToBuy = amount - collateralAmount;
-                (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
-                    synthMarketId,
-                    amountOfSynthToBuy,
-                    Price.Tolerance.DEFAULT // TODO: check correct price tolerance
-                );
-
-                // borrow sUSD from the pool to buy the remaining synths
-                perpsMarketFactory.synthetix.withdrawMarketUsd(
-                    perpsMarketId,
-                    address(this),
-                    costOfSynthInUSD
-                );
-
-                // buy the remaining synths needed to payout the trader
-                perpsMarketFactory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
-                spotMarket.buyExactOut(
-                    synthMarketId,
-                    amountOfSynthToBuy,
-                    costOfSynthInUSD,
-                    address(0) // TODO: change refferer to KWENTA?
-                );
-            }
-
             synth.transfer(ERC2771Context._msgSender(), amount);
         }
     }

@@ -8,6 +8,7 @@ import {
   SynthRouter,
   TrustedMulticallForwarder,
 } from '@synthetixio/spot-market/test/generated/typechain';
+import assertEvent from '@synthetixio/core-utils/utils/assertions/assert-event';
 import { wei } from '@synthetixio/wei';
 import { ethers } from 'ethers';
 import { AccountProxy, FeeCollectorMock, PerpsMarketProxy } from '../../generated/typechain';
@@ -113,18 +114,6 @@ export function bootstrapMarkets(data: BootstrapArgs) {
 
   const { synthMarkets } = bootstrapSynthMarkets(data.synthMarkets, chainStateWithPerpsMarkets);
 
-  // TODO: think about a better way to set this
-  before('set quanto markets', async () => {
-    for (const { requestedMarketId, quanto } of data.perpsMarkets) {
-      if (typeof(quanto?.quantoSynthMarketIndex) == 'number') {
-        const synthMarketId = synthMarkets()[quanto.quantoSynthMarketIndex].marketId();
-        await systems()
-        .PerpsMarket.connect(owner())
-        .setQuantoSynthMarket(requestedMarketId, synthMarketId);
-      }
-    }
-  });
-
   const { systems, signers, provider, owner, perpsMarkets, poolId, superMarketId, staker } =
     chainStateWithPerpsMarkets;
   const { trader1, trader2, trader3, keeper } = bootstrapTraders({
@@ -136,6 +125,24 @@ export function bootstrapMarkets(data: BootstrapArgs) {
   });
 
   let keeperCostOracleNode: MockGasPriceNode;
+
+  // TODO: think about a better way to set this
+  before('set quanto markets', async () => {
+    for (const { requestedMarketId, quanto } of data.perpsMarkets) {
+      if (typeof(quanto?.quantoSynthMarketIndex) == 'number') {
+        const synthMarketId = synthMarkets()[quanto.quantoSynthMarketIndex].marketId();
+        const setQuantoSynthMarketEvent = await systems()
+          .PerpsMarket.connect(owner())
+          .setQuantoSynthMarket(requestedMarketId, synthMarketId);
+        await assertEvent(
+          setQuantoSynthMarketEvent,
+          `QuantoSynthMarketIdSet(${requestedMarketId}, ${synthMarketId})`,
+          systems().PerpsMarket
+        );
+
+      }
+    }
+  });
 
   before('create perps gas usage nodes', async () => {
     if (data.skipKeeperCostOracleNode) {
