@@ -65,12 +65,12 @@ library PerpsPrice {
             uint128 quantoSynthMarketId = config.quantoSynthMarketId;
 
             /// @dev if the quantoSynthMarketId is not set, the base asset is USD, which has a price of 1 USD per USD
-            // TODO: check 100% this always works
             if (quantoSynthMarketId == 0) {
                 return 1 ether;
             }
 
-            // TODO: write comment explaining why this is sellFeedId
+            /// @dev we use the sellFeedId as it is the oracle manager node id used for all non-buy transactions
+            /// @dev and the quanto price is always use to convert the quanto asset to USD which is analagous to selling
             (, bytes32 sellFeedId,) = PerpsMarketFactory.load().spotMarket.getPriceData(config.quantoSynthMarketId);
             feedId = sellFeedId;
         } else {
