@@ -223,7 +223,6 @@ describe('Quanto Settle Offchain Async Order test', () => {
         before('update collateral price', async () => {
           await btcSynth.sellAggregator().mockSetCurrentPrice(bn(0.1));
           await btcSynth.buyAggregator().mockSetCurrentPrice(bn(0.1));
-          await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(0.1));
         });
 
         it('reverts with invalid pyth price timestamp (after time)', async () => {

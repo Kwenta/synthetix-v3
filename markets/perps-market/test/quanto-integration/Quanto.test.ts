@@ -121,11 +121,6 @@ describe('Quanto', () => {
           ethSpotMarketId
         );
       });
-      it('has quanto feed id set', async () => {
-        const btcPerpsMarketId = perpsMarkets()[0].marketId();
-        const quantoFeedId = await systems().PerpsMarket.getQuantoFeedId(btcPerpsMarketId);
-        assert(quantoFeedId.length > 0);
-      });
       it('should have correct open interest', async () => {
         const expectedOi = 60_000; // 2 BTC * 30k
         assertBn.equal(
@@ -197,10 +192,6 @@ describe('Quanto', () => {
       });
 
       before('eth pumps', async () => {
-        // TODO: adjust bootstrap so that the same aggregator/oracle is used for the spot market and the perps market
-        // TODO: we should be able to set the price of all these aggregators in a single go
-        // update eth price on perps market (effects USD pnl)
-        await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(4_000));
         // update eth price on synth market (effects collateral value)
         await synthMarkets()[0].sellAggregator().mockSetCurrentPrice(bn(4_000));
         await synthMarkets()[0].buyAggregator().mockSetCurrentPrice(bn(4_000));
@@ -299,10 +290,6 @@ describe('Quanto', () => {
       });
 
       before('eth dumps', async () => {
-        // TODO: adjust bootstrap so that the same aggregator/oracle is used for the spot market and the perps market
-        // TODO: we should be able to set the price of all these aggregators in a single go
-        // update eth price on perps market (effects USD pnl)
-        await perpsMarkets()[0].quantoAggregator().mockSetCurrentPrice(bn(1_000));
         // update eth price on synth market (effects collateral value)
         await synthMarkets()[0].sellAggregator().mockSetCurrentPrice(bn(1_000));
         await synthMarkets()[0].buyAggregator().mockSetCurrentPrice(bn(1_000));

@@ -5,6 +5,7 @@ import {INodeModule} from "@synthetixio/oracle-manager/contracts/interfaces/INod
 import {NodeOutput} from "@synthetixio/oracle-manager/contracts/storage/NodeOutput.sol";
 import {SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
 import {PerpsMarketFactory} from "./PerpsMarketFactory.sol";
+import {PerpsMarketConfiguration} from "./PerpsMarketConfiguration.sol";
 import {USDPerBaseUint256, USDPerQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
@@ -24,11 +25,6 @@ library PerpsPrice {
          * @dev the staleness tolerance is provided as a runtime argument to this feed for processing.
          */
         bytes32 feedId;
-        /**
-         * @dev the price feed id for the market quanto asset. This node is processed using the oracle manager which returns the price.
-         * @dev the staleness tolerance is provided as a runtime argument to this feed for processing.
-         */
-        bytes32 quantoFeedId;
         /**
          * @dev strict tolerance in seconds, mainly utilized for liquidations.
          */
@@ -62,11 +58,23 @@ library PerpsPrice {
         bool isQuanto
     ) internal view returns (uint256 price) {
         Data storage self = load(marketId);
-        bytes32 feedId = isQuanto ? self.quantoFeedId : self.feedId;
-        // TODO: check - are we certain this always works?
-        /// @dev if the quantoFeedId is not set, the base asset is USD, which has a price of 1 USD per USD
-        if (isQuanto && feedId == bytes32(0)) {
-            return 1 ether;
+
+        bytes32 feedId;
+        if (isQuanto) {
+            PerpsMarketConfiguration.Data storage config = PerpsMarketConfiguration.load(marketId);
+            uint128 quantoSynthMarketId = config.quantoSynthMarketId;
+
+            /// @dev if the quantoSynthMarketId is not set, the base asset is USD, which has a price of 1 USD per USD
+            if (quantoSynthMarketId == 0) {
+                return 1 ether;
+            }
+
+            /// @dev we use the sellFeedId as it is the oracle manager node id used for all non-buy transactions
+            /// @dev and the quanto price is always use to convert the quanto asset to USD which is analagous to selling
+            (, bytes32 sellFeedId,) = PerpsMarketFactory.load().spotMarket.getPriceData(config.quantoSynthMarketId);
+            feedId = sellFeedId;
+        } else {
+            feedId = self.feedId;
         }
 
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
@@ -91,9 +99,5 @@ library PerpsPrice {
     function update(Data storage self, bytes32 feedId, uint256 strictStalenessTolerance) internal {
         self.feedId = feedId;
         self.strictStalenessTolerance = strictStalenessTolerance;
-    }
-
-    function updateQuantoFeedId(Data storage self, bytes32 quantoFeedId) internal {
-        self.quantoFeedId = quantoFeedId;
     }
 }
