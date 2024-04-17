@@ -103,11 +103,9 @@ contract AsyncOrderSettlementPythModule is
                 runtime.marketId
             );
             uint128 quantoSynthMarketId = marketConfig.quantoSynthMarketId;
-            if (quantoSynthMarketId == SNX_USD_MARKET_ID) {
-                perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
-            } else {
-                perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
+            perpsAccount.updateCollateralAmount(quantoSynthMarketId, runtime.pnl.unwrap());
 
+            if (quantoSynthMarketId != SNX_USD_MARKET_ID) {
                 // get cost of trader quanto synth winnings in the spot market
                 ISpotMarketSystem spotMarket = factory.spotMarket;
                 (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
