@@ -129,7 +129,7 @@ contract AsyncOrderSettlementPythModule is
                     quantoSynthMarketId,
                     runtime.pnl.unwrap().toUint(),
                     costOfSynthInUSD,
-                    address(0) // TODO: change refferer to KWENTA?
+                    address(0)
                 );
 
                 ITokenModule synth = ITokenModule(
