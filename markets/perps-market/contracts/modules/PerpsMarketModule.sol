@@ -6,6 +6,7 @@ import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol"
 import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
 import {IPerpsMarketModule} from "../interfaces/IPerpsMarketModule.sol";
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, USDPerBaseUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for getting perps market information.
@@ -27,21 +28,21 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function skew(uint128 marketId) external view override returns (int256) {
+    function skew(uint128 marketId) external view override returns (BaseQuantoPerUSDInt256) {
         return PerpsMarket.load(marketId).skew;
     }
 
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function size(uint128 marketId) external view override returns (uint256) {
+    function size(uint128 marketId) external view override returns (BaseQuantoPerUSDUint256) {
         return PerpsMarket.load(marketId).size;
     }
 
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function maxOpenInterest(uint128 marketId) external view override returns (uint256) {
+    function maxOpenInterest(uint128 marketId) external view override returns (BaseQuantoPerUSDUint256) {
         return PerpsMarketConfiguration.load(marketId).maxMarketSize;
     }
 
@@ -62,7 +63,7 @@ contract PerpsMarketModule is IPerpsMarketModule {
     /**
      * @inheritdoc IPerpsMarketModule
      */
-    function indexPrice(uint128 marketId) external view override returns (uint256) {
+    function indexPrice(uint128 marketId) external view override returns (USDPerBaseUint256) {
         return PerpsPrice.getCurrentPrice(marketId, PerpsPrice.Tolerance.DEFAULT);
     }
 
@@ -71,9 +72,9 @@ contract PerpsMarketModule is IPerpsMarketModule {
      */
     function fillPrice(
         uint128 marketId,
-        int128 orderSize,
-        uint256 price
-    ) external view override returns (uint256) {
+        BaseQuantoPerUSDInt128 orderSize,
+        USDPerBaseUint256 price
+    ) external view override returns (USDPerBaseUint256) {
         return
             AsyncOrder.calculateFillPrice(
                 PerpsMarket.load(marketId).skew,

@@ -15,6 +15,7 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol";
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {Flags} from "../utils/Flags.sol";
+import {BaseQuantoPerUSDInt128, BaseQuantoPerUSDInt256, USDPerBaseUint256, USDPerQuantoUint256, QuantoUint256, USDUint256, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for committing async orders.
@@ -24,13 +25,14 @@ contract AsyncOrderModule is IAsyncOrderModule {
     using AsyncOrder for AsyncOrder.Data;
     using PerpsAccount for PerpsAccount.Data;
     using GlobalPerpsMarket for GlobalPerpsMarket.Data;
+    using InteractionsQuantoUint256 for QuantoUint256;
 
     /**
      * @inheritdoc IAsyncOrderModule
      */
     function commitOrder(
         AsyncOrder.OrderCommitmentRequest memory commitment
-    ) external override returns (AsyncOrder.Data memory retOrder, uint256 fees) {
+    ) external override returns (AsyncOrder.Data memory retOrder, USDUint256 fees) {
         FeatureFlag.ensureAccessToFeature(Flags.PERPS_SYSTEM);
         PerpsMarket.loadValid(commitment.marketId);
 
@@ -51,7 +53,7 @@ contract AsyncOrderModule is IAsyncOrderModule {
         AsyncOrder.Data storage order = AsyncOrder.load(commitment.accountId);
 
         // if order (previous) sizeDelta is not zero and didn't revert while checking, it means the previous order expired
-        if (order.request.sizeDelta != 0) {
+        if (!order.request.sizeDelta.isZero()) {
             // @notice not including the expiration time since it requires the previous settlement strategy to be loaded and enabled, otherwise loading it will revert and will prevent new orders to be committed
             emit PreviousOrderExpired(
                 order.request.marketId,
@@ -65,7 +67,7 @@ contract AsyncOrderModule is IAsyncOrderModule {
 
         order.updateValid(commitment);
 
-        (, uint256 feesAccrued, , ) = order.validateRequest(
+        (, USDUint256 feesAccrued, , ) = order.validateRequest(
             strategy,
             PerpsPrice.getCurrentPrice(commitment.marketId, PerpsPrice.Tolerance.DEFAULT)
         );
@@ -102,8 +104,8 @@ contract AsyncOrderModule is IAsyncOrderModule {
      */
     function computeOrderFees(
         uint128 marketId,
-        int128 sizeDelta
-    ) external view override returns (uint256 orderFees, uint256 fillPrice) {
+        BaseQuantoPerUSDInt128 sizeDelta
+    ) external view override returns (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice) {
         (orderFees, fillPrice) = _computeOrderFees(
             marketId,
             sizeDelta,
@@ -116,9 +118,9 @@ contract AsyncOrderModule is IAsyncOrderModule {
      */
     function computeOrderFeesWithPrice(
         uint128 marketId,
-        int128 sizeDelta,
-        uint256 price
-    ) external view override returns (uint256 orderFees, uint256 fillPrice) {
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 price
+    ) external view override returns (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice) {
         (orderFees, fillPrice) = _computeOrderFees(marketId, sizeDelta, price);
     }
 
@@ -128,7 +130,7 @@ contract AsyncOrderModule is IAsyncOrderModule {
     function getSettlementRewardCost(
         uint128 marketId,
         uint128 settlementStrategyId
-    ) external view override returns (uint256) {
+    ) external view override returns (USDUint256) {
         return
             AsyncOrder.settlementRewardCost(
                 PerpsMarketConfiguration.loadValidSettlementStrategy(marketId, settlementStrategyId)
@@ -138,8 +140,8 @@ contract AsyncOrderModule is IAsyncOrderModule {
     function requiredMarginForOrder(
         uint128 accountId,
         uint128 marketId,
-        int128 sizeDelta
-    ) external view override returns (uint256 requiredMargin) {
+        BaseQuantoPerUSDInt128 sizeDelta
+    ) external view override returns (USDUint256 requiredMargin) {
         return
             _requiredMarginForOrder(
                 accountId,
@@ -152,47 +154,47 @@ contract AsyncOrderModule is IAsyncOrderModule {
     function requiredMarginForOrderWithPrice(
         uint128 accountId,
         uint128 marketId,
-        int128 sizeDelta,
-        uint256 price
-    ) external view override returns (uint256 requiredMargin) {
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 price
+    ) external view override returns (USDUint256 requiredMargin) {
         return _requiredMarginForOrder(accountId, marketId, sizeDelta, price);
     }
 
     function _requiredMarginForOrder(
         uint128 accountId,
         uint128 marketId,
-        int128 sizeDelta,
-        uint256 orderPrice
-    ) internal view returns (uint256 requiredMargin) {
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 orderPrice
+    ) internal view returns (USDUint256 requiredMargin) {
         PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
             marketId
         );
 
         Position.Data storage oldPosition = PerpsMarket.accountPosition(marketId, accountId);
         PerpsAccount.Data storage account = PerpsAccount.load(accountId);
-        (uint256 currentInitialMargin, , ) = account.getAccountRequiredMargins(
+        (USDUint256 currentInitialMargin, , ) = account.getAccountRequiredMargins(
             PerpsPrice.Tolerance.DEFAULT
         );
-        (uint256 orderFees, uint256 fillPrice) = _computeOrderFees(marketId, sizeDelta, orderPrice);
-
+        (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice) = _computeOrderFees(marketId, sizeDelta, orderPrice);
+        BaseQuantoPerUSDInt128 newPositionSize = oldPosition.size + sizeDelta;
         return
             AsyncOrder.getRequiredMarginWithNewPosition(
                 account,
                 marketConfig,
                 marketId,
                 oldPosition.size,
-                oldPosition.size + sizeDelta,
+                newPositionSize,
                 fillPrice,
                 currentInitialMargin
-            ) + orderFees;
+            ) + orderFees.mulDecimalToUSD(PerpsPrice.getCurrentQuantoPrice(marketId, PerpsPrice.Tolerance.DEFAULT));
     }
 
     function _computeOrderFees(
         uint128 marketId,
-        int128 sizeDelta,
-        uint256 orderPrice
-    ) private view returns (uint256 orderFees, uint256 fillPrice) {
-        int256 skew = PerpsMarket.load(marketId).skew;
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 orderPrice
+    ) private view returns (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice) {
+        BaseQuantoPerUSDInt256 skew = PerpsMarket.load(marketId).skew;
         PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
             marketId
         );

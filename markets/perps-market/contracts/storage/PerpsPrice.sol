@@ -5,6 +5,7 @@ import {INodeModule} from "@synthetixio/oracle-manager/contracts/interfaces/INod
 import {NodeOutput} from "@synthetixio/oracle-manager/contracts/storage/NodeOutput.sol";
 import {SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
 import {PerpsMarketFactory} from "./PerpsMarketFactory.sol";
+import {USDPerBaseUint256, USDPerQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Price storage for a specific synth market.
@@ -24,6 +25,11 @@ library PerpsPrice {
          */
         bytes32 feedId;
         /**
+         * @dev the price feed id for the market quanto asset. This node is processed using the oracle manager which returns the price.
+         * @dev the staleness tolerance is provided as a runtime argument to this feed for processing.
+         */
+        bytes32 quantoFeedId;
+        /**
          * @dev strict tolerance in seconds, mainly utilized for liquidations.
          */
         uint256 strictStalenessTolerance;
@@ -39,8 +45,30 @@ library PerpsPrice {
     function getCurrentPrice(
         uint128 marketId,
         Tolerance priceTolerance
+    ) internal view returns (USDPerBaseUint256 price) {
+        return USDPerBaseUint256.wrap(_getCurrentPrice(marketId, priceTolerance, false));
+    }
+
+    function getCurrentQuantoPrice(
+        uint128 marketId,
+        Tolerance priceTolerance
+    ) internal view returns (USDPerQuantoUint256 price) {
+        return USDPerQuantoUint256.wrap(_getCurrentPrice(marketId, priceTolerance, true));
+    }
+
+    function _getCurrentPrice(
+        uint128 marketId,
+        Tolerance priceTolerance,
+        bool isQuanto
     ) internal view returns (uint256 price) {
         Data storage self = load(marketId);
+        bytes32 feedId = isQuanto ? self.quantoFeedId : self.feedId;
+        // TODO: check - are we certain this always works?
+        /// @dev if the quantoFeedId is not set, the base asset is USD, which has a price of 1 USD per USD
+        if (isQuanto && feedId == bytes32(0)) {
+            return 1 ether;
+        }
+
         PerpsMarketFactory.Data storage factory = PerpsMarketFactory.load();
         NodeOutput.Data memory output;
         if (priceTolerance == Tolerance.STRICT) {
@@ -49,12 +77,12 @@ library PerpsPrice {
             runtimeKeys[0] = bytes32("stalenessTolerance");
             runtimeValues[0] = bytes32(self.strictStalenessTolerance);
             output = INodeModule(factory.oracle).processWithRuntime(
-                self.feedId,
+                feedId,
                 runtimeKeys,
                 runtimeValues
             );
         } else {
-            output = INodeModule(factory.oracle).process(self.feedId);
+            output = INodeModule(factory.oracle).process(feedId);
         }
 
         return output.price.toUint();
@@ -63,5 +91,9 @@ library PerpsPrice {
     function update(Data storage self, bytes32 feedId, uint256 strictStalenessTolerance) internal {
         self.feedId = feedId;
         self.strictStalenessTolerance = strictStalenessTolerance;
+    }
+
+    function updateQuantoFeedId(Data storage self, bytes32 quantoFeedId) internal {
+        self.quantoFeedId = quantoFeedId;
     }
 }

@@ -8,6 +8,7 @@ import {DecimalMath} from "@synthetixio/core-contracts/contracts/utils/DecimalMa
 import {MathUtil} from "../utils/MathUtil.sol";
 import {IFeeCollector} from "../interfaces/external/IFeeCollector.sol";
 import {PerpsMarketFactory} from "./PerpsMarketFactory.sol";
+import {USDUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title This library contains all global perps market configuration data
@@ -43,11 +44,11 @@ library GlobalPerpsMarketConfiguration {
         /**
          * @dev minimum configured keeper reward for the sender who liquidates the account
          */
-        uint256 minKeeperRewardUsd;
+        USDUint256 minKeeperRewardUsd;
         /**
          * @dev maximum configured keeper reward for the sender who liquidates the account
          */
-        uint256 maxKeeperRewardUsd;
+        USDUint256 maxKeeperRewardUsd;
         /**
          * @dev maximum configured number of concurrent positions per account.
          * @notice If set to zero it means no new positions can be opened, but existing positions can be increased or decreased.
@@ -104,29 +105,21 @@ library GlobalPerpsMarketConfiguration {
 
     function minimumKeeperRewardCap(
         Data storage self,
-        uint256 costOfExecutionInUsd
-    ) internal view returns (uint256) {
-        return
-            MathUtil.max(
-                costOfExecutionInUsd + self.minKeeperRewardUsd,
-                costOfExecutionInUsd.mulDecimal(self.minKeeperProfitRatioD18 + DecimalMath.UNIT)
-            );
+        USDUint256 costOfExecutionInUsd
+    ) internal view returns (USDUint256) {
+        return (costOfExecutionInUsd + self.minKeeperRewardUsd).max(costOfExecutionInUsd.mulDecimal(self.minKeeperProfitRatioD18 + DecimalMath.UNIT));
     }
 
     function maximumKeeperRewardCap(
         Data storage self,
-        uint256 availableMarginInUsd
-    ) internal view returns (uint256) {
+        USDUint256 availableMarginInUsd
+    ) internal view returns (USDUint256) {
         // Note: if availableMarginInUsd is zero, it means the account was flagged, so the maximumKeeperRewardCap will just be maxKeeperRewardUsd
-        if (availableMarginInUsd == 0) {
+        if (availableMarginInUsd.isZero()) {
             return self.maxKeeperRewardUsd;
         }
 
-        return
-            MathUtil.min(
-                availableMarginInUsd.mulDecimal(self.maxKeeperScalingRatioD18),
-                self.maxKeeperRewardUsd
-            );
+        return availableMarginInUsd.mulDecimal(self.maxKeeperScalingRatioD18).min(self.maxKeeperRewardUsd);
     }
 
     /**
@@ -134,13 +127,13 @@ library GlobalPerpsMarketConfiguration {
      */
     function keeperReward(
         Data storage self,
-        uint256 keeperRewards,
-        uint256 costOfExecutionInUsd,
-        uint256 availableMarginInUsd
-    ) internal view returns (uint256) {
-        uint256 minCap = minimumKeeperRewardCap(self, costOfExecutionInUsd);
-        uint256 maxCap = maximumKeeperRewardCap(self, availableMarginInUsd);
-        return MathUtil.min(MathUtil.max(minCap, keeperRewards + costOfExecutionInUsd), maxCap);
+        USDUint256 keeperRewards,
+        USDUint256 costOfExecutionInUsd,
+        USDUint256 availableMarginInUsd
+    ) internal view returns (USDUint256) {
+        USDUint256 minCap = minimumKeeperRewardCap(self, costOfExecutionInUsd);
+        USDUint256 maxCap = maximumKeeperRewardCap(self, availableMarginInUsd);
+        return minCap.max(keeperRewards + costOfExecutionInUsd).min(maxCap);
     }
 
     function updateSynthDeductionPriority(
@@ -156,25 +149,25 @@ library GlobalPerpsMarketConfiguration {
 
     function collectFees(
         Data storage self,
-        uint256 orderFees,
+        USDUint256 orderFees,
         address referrer,
         PerpsMarketFactory.Data storage factory
-    ) internal returns (uint256 referralFees, uint256 feeCollectorFees) {
+    ) internal returns (USDUint256 referralFees, USDUint256 feeCollectorFees) {
         referralFees = _collectReferrerFees(self, orderFees, referrer, factory);
-        uint256 remainingFees = orderFees - referralFees;
+        USDUint256 remainingFees = orderFees - referralFees;
 
-        if (remainingFees == 0 || self.feeCollector == IFeeCollector(address(0))) {
-            return (referralFees, 0);
+        if (remainingFees.isZero() || self.feeCollector == IFeeCollector(address(0))) {
+            return (referralFees, InteractionsUSDUint256.zero());
         }
 
-        uint256 feeCollectorQuote = self.feeCollector.quoteFees(
+        USDUint256 feeCollectorQuote = self.feeCollector.quoteFees(
             factory.perpsMarketId,
             remainingFees,
             ERC2771Context._msgSender()
         );
 
-        if (feeCollectorQuote == 0) {
-            return (referralFees, 0);
+        if (feeCollectorQuote.isZero()) {
+            return (referralFees, InteractionsUSDUint256.zero());
         }
 
         if (feeCollectorQuote > remainingFees) {
@@ -203,12 +196,12 @@ library GlobalPerpsMarketConfiguration {
 
     function _collectReferrerFees(
         Data storage self,
-        uint256 fees,
+        USDUint256 fees,
         address referrer,
         PerpsMarketFactory.Data storage factory
-    ) private returns (uint256 referralFeesSent) {
+    ) private returns (USDUint256 referralFeesSent) {
         if (referrer == address(0)) {
-            return 0;
+            return InteractionsUSDUint256.zero();
         }
 
         uint256 referrerShareRatio = self.referrerShare[referrer];

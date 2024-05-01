@@ -2,11 +2,13 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
+import {Price} from "@synthetixio/spot-market/contracts/storage/Price.sol";
 import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFlag.sol";
 import {Account} from "@synthetixio/main/contracts/storage/Account.sol";
 import {AccountRBAC} from "@synthetixio/main/contracts/storage/AccountRBAC.sol";
 import {SetUtil} from "@synthetixio/core-contracts/contracts/utils/SetUtil.sol";
 import {ITokenModule} from "@synthetixio/core-modules/contracts/interfaces/ITokenModule.sol";
+import {ISpotMarketSystem} from "../interfaces/external/ISpotMarketSystem.sol";
 import {PerpsMarketFactory} from "../storage/PerpsMarketFactory.sol";
 import {IPerpsAccountModule} from "../interfaces/IPerpsAccountModule.sol";
 import {PerpsAccount, SNX_USD_MARKET_ID} from "../storage/PerpsAccount.sol";
@@ -18,6 +20,7 @@ import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
+import {QuantoUint256, USDInt256, USDUint256, QuantoInt256, BaseQuantoPerUSDInt128, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 import {OwnableStorage} from "@synthetixio/core-contracts/contracts/ownership/OwnableStorage.sol";
 
 /**
@@ -32,6 +35,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
     using SafeCastI256 for int256;
     using GlobalPerpsMarket for GlobalPerpsMarket.Data;
     using PerpsMarketFactory for PerpsMarketFactory.Data;
+    using InteractionsUSDUint256 for USDUint256;
 
     /**
      * @inheritdoc IPerpsAccountModule
@@ -86,14 +90,14 @@ contract PerpsAccountModule is IPerpsAccountModule {
     /**
      * @inheritdoc IPerpsAccountModule
      */
-    function totalCollateralValue(uint128 accountId) external view override returns (uint256) {
+    function totalCollateralValue(uint128 accountId) external view override returns (USDUint256) {
         return PerpsAccount.load(accountId).getTotalCollateralValue(PerpsPrice.Tolerance.DEFAULT);
     }
 
     /**
      * @inheritdoc IPerpsAccountModule
      */
-    function totalAccountOpenInterest(uint128 accountId) external view override returns (uint256) {
+    function totalAccountOpenInterest(uint128 accountId) external view override returns (USDUint256) {
         return PerpsAccount.load(accountId).getTotalNotionalOpenInterest();
     }
 
@@ -107,7 +111,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
         external
         view
         override
-        returns (int256 totalPnl, int256 accruedFunding, int128 positionSize, uint256 owedInterest)
+        returns (QuantoInt256 totalPnl, QuantoInt256 accruedFunding, BaseQuantoPerUSDInt128 positionSize, QuantoUint256 owedInterest)
     {
         PerpsMarket.Data storage perpsMarket = PerpsMarket.loadValid(marketId);
 
@@ -125,7 +129,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
     function getOpenPositionSize(
         uint128 accountId,
         uint128 marketId
-    ) external view override returns (int128 positionSize) {
+    ) external view override returns (BaseQuantoPerUSDInt128 positionSize) {
         PerpsMarket.Data storage perpsMarket = PerpsMarket.loadValid(marketId);
 
         positionSize = perpsMarket.positions[accountId].size;
@@ -136,7 +140,7 @@ contract PerpsAccountModule is IPerpsAccountModule {
      */
     function getAvailableMargin(
         uint128 accountId
-    ) external view override returns (int256 availableMargin) {
+    ) external view override returns (USDInt256 availableMargin) {
         availableMargin = PerpsAccount.load(accountId).getAvailableMargin(
             PerpsPrice.Tolerance.DEFAULT
         );
@@ -147,13 +151,13 @@ contract PerpsAccountModule is IPerpsAccountModule {
      */
     function getWithdrawableMargin(
         uint128 accountId
-    ) external view override returns (int256 withdrawableMargin) {
+    ) external view override returns (USDInt256 withdrawableMargin) {
         PerpsAccount.Data storage account = PerpsAccount.load(accountId);
-        int256 availableMargin = account.getAvailableMargin(PerpsPrice.Tolerance.DEFAULT);
-        (uint256 initialRequiredMargin, , uint256 liquidationReward) = account
+        USDInt256 availableMargin = account.getAvailableMargin(PerpsPrice.Tolerance.DEFAULT);
+        (USDUint256 initialRequiredMargin, , USDUint256 liquidationReward) = account
             .getAccountRequiredMargins(PerpsPrice.Tolerance.DEFAULT);
 
-        uint256 requiredMargin = initialRequiredMargin + liquidationReward;
+        USDUint256 requiredMargin = initialRequiredMargin + liquidationReward;
 
         withdrawableMargin = availableMargin - requiredMargin.toInt();
     }
@@ -168,22 +172,22 @@ contract PerpsAccountModule is IPerpsAccountModule {
         view
         override
         returns (
-            uint256 requiredInitialMargin,
-            uint256 requiredMaintenanceMargin,
-            uint256 maxLiquidationReward
+            USDUint256 requiredInitialMargin,
+            USDUint256 requiredMaintenanceMargin,
+            USDUint256 maxLiquidationReward
         )
     {
         PerpsAccount.Data storage account = PerpsAccount.load(accountId);
         if (account.openPositionMarketIds.length() == 0) {
-            return (0, 0, 0);
+            return (InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero(), InteractionsUSDUint256.zero());
         }
 
         (requiredInitialMargin, requiredMaintenanceMargin, maxLiquidationReward) = account
             .getAccountRequiredMargins(PerpsPrice.Tolerance.DEFAULT);
 
         // Include liquidation rewards to required initial margin and required maintenance margin
-        requiredInitialMargin += maxLiquidationReward;
-        requiredMaintenanceMargin += maxLiquidationReward;
+        requiredInitialMargin = requiredInitialMargin + maxLiquidationReward;
+        requiredMaintenanceMargin = requiredMaintenanceMargin + maxLiquidationReward;
     }
 
     /**
@@ -251,15 +255,58 @@ contract PerpsAccountModule is IPerpsAccountModule {
                 amount
             );
         } else {
+            ISpotMarketSystem spotMarket = perpsMarketFactory.spotMarket;
             ITokenModule synth = ITokenModule(
-                perpsMarketFactory.spotMarket.getSynth(synthMarketId)
+                spotMarket.getSynth(synthMarketId)
             );
-            // withdrawing from a synth market
-            perpsMarketFactory.synthetix.withdrawMarketCollateral(
+
+            uint256 collateralAmount = perpsMarketFactory.synthetix.getMarketCollateralAmount(
                 perpsMarketId,
-                address(synth),
-                amount
+                address(synth)
             );
+
+            // can withdraw all the payout from the markets collateral directly
+            if (collateralAmount >= amount) {
+                // withdraw this markets trader deposited synth collateral
+                perpsMarketFactory.synthetix.withdrawMarketCollateral(
+                    perpsMarketId,
+                    address(synth),
+                    amount
+                );
+            } else {
+                // TODO: potentially move this logic to the position settlement, instead of withdrawal time
+                // withdraw all available market collateral
+                perpsMarketFactory.synthetix.withdrawMarketCollateral(
+                    perpsMarketId,
+                    address(synth),
+                    collateralAmount
+                );
+
+                // workout how much sUSD is needed to buy the remaining synths
+                uint256 amountOfSynthToBuy = amount - collateralAmount;
+                (uint256 costOfSynthInUSD, ) = spotMarket.quoteBuyExactOut(
+                    synthMarketId,
+                    amountOfSynthToBuy,
+                    Price.Tolerance.DEFAULT // TODO: check correct price tolerance
+                );
+
+                // borrow sUSD from the pool to buy the remaining synths
+                perpsMarketFactory.synthetix.withdrawMarketUsd(
+                    perpsMarketId,
+                    address(this),
+                    costOfSynthInUSD
+                );
+
+                // buy the remaining synths needed to payout the trader
+                perpsMarketFactory.usdToken.approve(address(spotMarket), costOfSynthInUSD);
+                spotMarket.buyExactOut(
+                    synthMarketId,
+                    amountOfSynthToBuy,
+                    costOfSynthInUSD,
+                    address(0) // TODO: change refferer to KWENTA?
+                );
+            }
+
             synth.transfer(ERC2771Context._msgSender(), amount);
         }
     }

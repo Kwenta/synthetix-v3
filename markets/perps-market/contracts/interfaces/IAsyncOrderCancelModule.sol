@@ -4,6 +4,7 @@ import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {Position} from "../storage/Position.sol";
 import {PerpsMarket} from "../storage/PerpsMarket.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
+import {BaseQuantoPerUSDInt128, USDPerBaseUint256, USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 interface IAsyncOrderCancelModule {
     /**
@@ -20,10 +21,10 @@ interface IAsyncOrderCancelModule {
     event OrderCancelled(
         uint128 indexed marketId,
         uint128 indexed accountId,
-        uint256 desiredPrice,
-        uint256 fillPrice,
-        int128 sizeDelta,
-        uint256 settlementReward,
+        USDPerBaseUint256 desiredPrice,
+        USDPerBaseUint256 fillPrice,
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDUint256 settlementReward,
         bytes32 indexed trackingCode,
         address settler
     );
@@ -32,10 +33,10 @@ interface IAsyncOrderCancelModule {
     struct CancelOrderRuntime {
         uint128 marketId;
         uint128 accountId;
-        int128 sizeDelta;
-        uint256 settlementReward;
-        uint256 fillPrice;
-        uint256 acceptablePrice;
+        BaseQuantoPerUSDInt128 sizeDelta;
+        USDUint256 settlementReward;
+        USDPerBaseUint256 fillPrice;
+        USDPerBaseUint256 acceptablePrice;
     }
 
     /**

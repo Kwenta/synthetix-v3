@@ -2,6 +2,7 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import "../interfaces/external/IFeeCollector.sol";
+import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Mock Fee Collector.
@@ -15,14 +16,14 @@ contract FeeCollectorMock is IFeeCollector {
 
     function quoteFees(
         uint128 marketId,
-        uint256 feeAmount,
+        USDUint256 feeAmount,
         address sender
-    ) external override returns (uint256) {
+    ) external override returns (USDUint256) {
         // mention the variables in the block to prevent unused local variable warning
         marketId;
         sender;
 
-        return (feeAmount * feeRatioD18) / 1e18;
+        return feeAmount.mulDecimal(feeRatioD18);
     }
 
     function supportsInterface(

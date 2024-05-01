@@ -6,19 +6,22 @@ import {SafeCastI128} from "@synthetixio/core-contracts/contracts/utils/SafeCast
 import {OrderFee} from "./OrderFee.sol";
 import {SettlementStrategy} from "./SettlementStrategy.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
+import {BaseQuantoPerUSDUint256, BaseQuantoPerUSDInt128, USDPerBaseUint256, BaseQuantoPerUSDUint128, BaseQuantoPerUSDInt256, QuantoUint256, InteractionsBaseQuantoPerUSDUint256, InteractionsBaseQuantoPerUSDInt128, InteractionsQuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 library PerpsMarketConfiguration {
     using DecimalMath for int256;
     using DecimalMath for uint256;
     using SafeCastI128 for int128;
+    using InteractionsBaseQuantoPerUSDUint256 for BaseQuantoPerUSDUint256;
+    using InteractionsBaseQuantoPerUSDInt128 for BaseQuantoPerUSDInt128;
 
-    error MaxOpenInterestReached(uint128 marketId, uint256 maxMarketSize, int256 newSideSize);
+    error MaxOpenInterestReached(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize, BaseQuantoPerUSDInt256 newSideSize);
 
     error MaxUSDOpenInterestReached(
         uint128 marketId,
-        uint256 maxMarketValue,
-        int256 newSideSize,
-        uint256 price
+        QuantoUint256 maxMarketValue,
+        BaseQuantoPerUSDInt256 newSideSize,
+        USDPerBaseUint256 price
     );
 
     error InvalidSettlementStrategy(uint256 settlementStrategyId);
@@ -26,9 +29,9 @@ library PerpsMarketConfiguration {
     struct Data {
         OrderFee.Data orderFees;
         SettlementStrategy.Data[] settlementStrategies;
-        uint256 maxMarketSize; // oi cap in units of asset
+        BaseQuantoPerUSDUint256 maxMarketSize; // oi cap in base*quanto/usd
         uint256 maxFundingVelocity;
-        uint256 skewScale;
+        BaseQuantoPerUSDUint256 skewScale;
         /**
          * @dev the initial margin requirements for this market when opening a position
          * @dev this fraction is multiplied by the impact of the position on the skew (open position size / skewScale)
@@ -58,9 +61,9 @@ library PerpsMarketConfiguration {
          */
         uint256 flagRewardRatioD18;
         /**
-         * @dev minimum position value in USD, this is a constant value added to position margin requirements (initial/maintenance)
+         * @dev minimum position value in the quanto asset, this is a constant value added to position margin requirements (initial/maintenance)
          */
-        uint256 minimumPositionMargin;
+        QuantoUint256 minimumPositionMargin;
         /**
          * @dev This value gets applied to the initial margin ratio to ensure there's a cap on the max leverage regardless of position size
          */
@@ -75,10 +78,14 @@ library PerpsMarketConfiguration {
          */
         address endorsedLiquidator;
         /**
-         * @dev OI cap in USD denominated.
+         * @dev OI cap in quanto denominated.
          * @dev If set to zero then there is no cap with value, just units
          */
-        uint256 maxMarketValue;
+        QuantoUint256 maxMarketValue;
+        /**
+         * @dev The Synth Market Id for the quanto asset for this market
+         */
+        uint128 quantoSynthMarketId;
     }
 
     function load(uint128 marketId) internal pure returns (Data storage store) {
@@ -90,54 +97,56 @@ library PerpsMarketConfiguration {
         }
     }
 
-    function maxLiquidationAmountInWindow(Data storage self) internal view returns (uint256) {
+    function maxLiquidationAmountInWindow(Data storage self) internal view returns (BaseQuantoPerUSDUint256) {
         OrderFee.Data storage orderFeeData = self.orderFees;
         return
-            (orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(self.skewScale).mulDecimal(
+            self.skewScale.mulDecimal(orderFeeData.makerFee + orderFeeData.takerFee).mulDecimal(
                 self.maxLiquidationLimitAccumulationMultiplier
-            ) * self.maxSecondsInLiquidationWindow;
+            ).mul(self.maxSecondsInLiquidationWindow);
     }
 
     function numberOfLiquidationWindows(
         Data storage self,
-        uint256 positionSize
+        BaseQuantoPerUSDUint256 positionSize
     ) internal view returns (uint256) {
-        return MathUtil.ceilDivide(positionSize, maxLiquidationAmountInWindow(self));
+        BaseQuantoPerUSDUint256 maxLiquidation = maxLiquidationAmountInWindow(self);
+        if (maxLiquidation.isZero()) return 0;
+        return positionSize.ceilDivide(maxLiquidation);
     }
 
     function calculateFlagReward(
         Data storage self,
-        uint256 notionalValue
-    ) internal view returns (uint256) {
+        QuantoUint256 notionalValue
+    ) internal view returns (QuantoUint256) {
         return notionalValue.mulDecimal(self.flagRewardRatioD18);
     }
 
     function calculateRequiredMargins(
         Data storage self,
-        int128 size,
-        uint256 price
+        BaseQuantoPerUSDInt128 size,
+        USDPerBaseUint256 price
     )
         internal
         view
         returns (
             uint256 initialMarginRatio,
             uint256 maintenanceMarginRatio,
-            uint256 initialMargin,
-            uint256 maintenanceMargin
+            QuantoUint256 initialMargin,
+            QuantoUint256 maintenanceMargin
         )
     {
-        if (size == 0) {
-            return (0, 0, 0, 0);
+        if (size.isZero()) {
+            return (0, 0, InteractionsQuantoUint256.zero(), InteractionsQuantoUint256.zero());
         }
-        uint256 sizeAbs = MathUtil.abs(size.to256());
-        uint256 impactOnSkew = self.skewScale == 0 ? 0 : sizeAbs.divDecimal(self.skewScale);
+        BaseQuantoPerUSDUint256 sizeAbs = size.abs();
+        uint256 impactOnSkew = self.skewScale.isZero() ? 0 : sizeAbs.divDecimalToDimensionless(self.skewScale);
 
         initialMarginRatio =
             impactOnSkew.mulDecimal(self.initialMarginRatioD18) +
             self.minimumInitialMarginRatioD18;
         maintenanceMarginRatio = initialMarginRatio.mulDecimal(self.maintenanceMarginScalarD18);
 
-        uint256 notional = sizeAbs.mulDecimal(price);
+        QuantoUint256 notional = sizeAbs.mulDecimalToQuanto(price);
 
         initialMargin = notional.mulDecimal(initialMarginRatio) + self.minimumPositionMargin;
         maintenanceMargin =

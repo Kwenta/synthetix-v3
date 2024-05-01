@@ -1417,6 +1417,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kwenta/quanto-dimensions@npm:^1.1.3":
+  version: 1.1.3
+  resolution: "@kwenta/quanto-dimensions@npm:1.1.3"
+  checksum: 10/7181ef9b712464c9371cbe62472eeca1b572b8ded6019e5829131d2ecb0f5223ebf8cb31ff37ed87f4c26164df45ca92d19451eedf5a0ee66b1987590dabf2b7
+  languageName: node
+  linkType: hard
+
 "@lerna-lite/changed@npm:^3.3.0":
   version: 3.3.0
   resolution: "@lerna-lite/changed@npm:3.3.0"
@@ -3181,6 +3188,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@synthetixio/perps-market@workspace:markets/perps-market"
   dependencies:
+    "@kwenta/quanto-dimensions": "npm:^1.1.3"
     "@synthetixio/common-config": "workspace:*"
     "@synthetixio/core-contracts": "workspace:*"
     "@synthetixio/core-modules": "workspace:*"

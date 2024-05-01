@@ -14,6 +14,7 @@ import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
+import {USDUint256, USDPerBaseUint256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for cancelling async orders.
@@ -44,14 +45,14 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
                 (asyncOrder.commitmentTime + settlementStrategy.commitmentPriceDelay).to64()
             );
 
-        _cancelOrder(offchainPrice.toUint(), asyncOrder, settlementStrategy);
+        _cancelOrder(USDPerBaseUint256.wrap(offchainPrice.toUint()), asyncOrder, settlementStrategy);
     }
 
     /**
      * @dev used for canceling an order.
      */
     function _cancelOrder(
-        uint256 price,
+        USDPerBaseUint256 price,
         AsyncOrder.Data storage asyncOrder,
         SettlementStrategy.Data storage settlementStrategy
     ) private {
@@ -68,7 +69,7 @@ contract AsyncOrderCancelModule is IAsyncOrderCancelModule, IMarketEvents, IAcco
 
         runtime.fillPrice = asyncOrder.validateCancellation(settlementStrategy, price);
 
-        if (runtime.settlementReward > 0) {
+        if (runtime.settlementReward.greaterThanZero()) {
             // deduct keeper reward
             (uint128[] memory deductedSynthIds, uint256[] memory deductedAmount) = PerpsAccount
                 .load(runtime.accountId)

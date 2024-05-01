@@ -2,6 +2,7 @@
 pragma solidity >=0.8.11 <0.9.0;
 
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
+import {QuantoUint256, BaseQuantoPerUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for updating configuration in relation to async order modules.
@@ -44,6 +45,13 @@ interface IMarketConfigurationModule {
     );
 
     /**
+     * @notice Gets fired when quanto feed id for perps market is updated.
+     * @param perpsMarketId id of perps market
+     * @param quantoFeedId oracle node id for quanto feed
+     */
+    event QuantoFeedIdSet(uint128 indexed perpsMarketId, bytes32 quantoFeedId);
+
+    /**
      * @notice Gets fired when order fees are updated.
      * @param marketId udpates fees to this specific market.
      * @param makerFeeRatio the maker fee ratio.
@@ -59,7 +67,7 @@ interface IMarketConfigurationModule {
      */
     event FundingParametersSet(
         uint128 indexed marketId,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         uint256 maxFundingVelocity
     );
 
@@ -91,26 +99,26 @@ interface IMarketConfigurationModule {
         uint256 maintenanceMarginRatioD18,
         uint256 minimumInitialMarginRatioD18,
         uint256 flagRewardRatioD18,
-        uint256 minimumPositionMargin
+        QuantoUint256 minimumPositionMargin
     );
 
     /**
      * @notice Gets fired when max market value is updated.
-     * @param marketId udpates funding parameters to this specific market.
-     * @param maxMarketSize the max market size in units.
+     * @param marketId updates funding parameters to this specific market.
+     * @param maxMarketSize the max market size in quanto units.
      */
-    event MaxMarketSizeSet(uint128 indexed marketId, uint256 maxMarketSize);
+    event MaxMarketSizeSet(uint128 indexed marketId, BaseQuantoPerUSDUint256 maxMarketSize);
 
     /**
      * @notice Gets fired when max market value is updated.
-     * @param marketId udpates funding parameters to this specific market.
-     * @param maxMarketValue the max market value in USD.
+     * @param marketId updates funding parameters to this specific market.
+     * @param maxMarketValue the max market value in quanto units.
      */
-    event MaxMarketValueSet(uint128 indexed marketId, uint256 maxMarketValue);
+    event MaxMarketValueSet(uint128 indexed marketId, QuantoUint256 maxMarketValue);
 
     /**
      * @notice Gets fired when locked oi ratio is updated.
-     * @param marketId udpates funding parameters to this specific market.
+     * @param marketId updates funding parameters to this specific market.
      * @param lockedOiRatioD18 the locked OI ratio skew scale (as decimal with 18 digits precision).
      */
     event LockedOiRatioSet(uint128 indexed marketId, uint256 lockedOiRatioD18);
@@ -164,6 +172,17 @@ interface IMarketConfigurationModule {
     ) external;
 
     /**
+     * @notice Set quanto node id for perps market
+     * @param perpsMarketId id of the market to set price feed.
+     * @param quantoFeedId the node feed id for quanto asset
+     * @dev if the quantoFeedId is not set, the market defaults to acting as a classic perps market
+     */
+    function setQuantoFeedId(
+        uint128 perpsMarketId,
+        bytes32 quantoFeedId
+    ) external;
+
+    /**
      * @notice Set funding parameters for a market with this function.
      * @param marketId id of the market to set funding parameters.
      * @param skewScale the skew scale.
@@ -171,7 +190,7 @@ interface IMarketConfigurationModule {
      */
     function setFundingParameters(
         uint128 marketId,
-        uint256 skewScale,
+        BaseQuantoPerUSDUint256 skewScale,
         uint256 maxFundingVelocity
     ) external;
 
@@ -206,23 +225,23 @@ interface IMarketConfigurationModule {
         uint256 minimumInitialMarginRatioD18,
         uint256 maintenanceMarginScalarD18,
         uint256 flagRewardRatioD18,
-        uint256 minimumPositionMargin
+        QuantoUint256 minimumPositionMargin
     ) external;
 
     /**
      * @notice Set the max size of an specific market with this function.
      * @dev This controls the maximum open interest a market can have on either side (Long | Short). So the total Open Interest (with zero skew) for a market can be up to max market size * 2.
      * @param marketId id of the market to set the max market value.
-     * @param maxMarketSize the max market size in market asset units.
+     * @param maxMarketSize the max market size in base*quanto/usd.
      */
-    function setMaxMarketSize(uint128 marketId, uint256 maxMarketSize) external;
+    function setMaxMarketSize(uint128 marketId, BaseQuantoPerUSDUint256 maxMarketSize) external;
 
     /**
      * @notice Set the max value in USD of an specific market with this function.
      * @param marketId id of the market to set the max market value.
-     * @param maxMarketValue the max market size in market USD value.
+     * @param maxMarketValue the max market size in market quanto value.
      */
-    function setMaxMarketValue(uint128 marketId, uint256 maxMarketValue) external;
+    function setMaxMarketValue(uint128 marketId, QuantoUint256 maxMarketValue) external;
 
     /**
      * @notice Set the locked OI Ratio for a market with this function.
@@ -293,7 +312,7 @@ interface IMarketConfigurationModule {
             uint256 minimumInitialMarginRatioD18,
             uint256 maintenanceMarginScalarD18,
             uint256 flagRewardRatioD18,
-            uint256 minimumPositionMargin
+            QuantoUint256 minimumPositionMargin
         );
 
     /**
@@ -304,21 +323,21 @@ interface IMarketConfigurationModule {
      */
     function getFundingParameters(
         uint128 marketId
-    ) external view returns (uint256 skewScale, uint256 maxFundingVelocity);
+    ) external view returns (BaseQuantoPerUSDUint256 skewScale, uint256 maxFundingVelocity);
 
     /**
      * @notice Gets the max size of an specific market.
      * @param marketId id of the market.
-     * @return maxMarketSize the max market size in market asset units.
+     * @return maxMarketSize the max market size in market base*quanto/usd units.
      */
-    function getMaxMarketSize(uint128 marketId) external view returns (uint256 maxMarketSize);
+    function getMaxMarketSize(uint128 marketId) external view returns (BaseQuantoPerUSDUint256 maxMarketSize);
 
     /**
      * @notice Gets the max size (in value) of an specific market.
      * @param marketId id of the market.
-     * @return maxMarketValue the max market size in market USD value.
+     * @return maxMarketValue the max market size in market quanto units.
      */
-    function getMaxMarketValue(uint128 marketId) external view returns (uint256 maxMarketValue);
+    function getMaxMarketValue(uint128 marketId) external view returns (QuantoUint256 maxMarketValue);
 
     /**
      * @notice Gets the order fees of a market.
@@ -346,4 +365,13 @@ interface IMarketConfigurationModule {
     function getPriceData(
         uint128 perpsMarketId
     ) external view returns (bytes32 feedId, uint256 strictStalenessTolerance);
+
+    /**
+     * @notice Gets the quanto feed id for a specific perps market.
+     * @param perpsMarketId id of perps market
+     * @return quantoFeedId oracle node id for quanto feed
+     */ 
+     function getQuantoFeedId(
+         uint128 perpsMarketId
+     ) external view returns (bytes32 quantoFeedId);
 }

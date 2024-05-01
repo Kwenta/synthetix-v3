@@ -14,6 +14,7 @@ import {OwnableStorage} from "@synthetixio/core-contracts/contracts/ownership/Ow
 import {AddressError} from "@synthetixio/core-contracts/contracts/errors/AddressError.sol";
 import {ParameterError} from "@synthetixio/core-contracts/contracts/errors/ParameterError.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
+import {USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for global Perps Market settings.
@@ -86,9 +87,9 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
      * @inheritdoc IGlobalPerpsMarketModule
      */
     function setKeeperRewardGuards(
-        uint256 minKeeperRewardUsd,
+        USDUint256 minKeeperRewardUsd,
         uint256 minKeeperProfitRatioD18,
-        uint256 maxKeeperRewardUsd,
+        USDUint256 maxKeeperRewardUsd,
         uint256 maxKeeperScalingRatioD18
     ) external override {
         OwnableStorage.onlyOwner();
@@ -118,9 +119,9 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
         view
         override
         returns (
-            uint256 minKeeperRewardUsd,
+            USDUint256 minKeeperRewardUsd,
             uint256 minKeeperProfitRatioD18,
-            uint256 maxKeeperRewardUsd,
+            USDUint256 maxKeeperRewardUsd,
             uint256 maxKeeperScalingRatioD18
         )
     {
@@ -138,7 +139,7 @@ contract GlobalPerpsMarketModule is IGlobalPerpsMarketModule {
         external
         view
         override
-        returns (uint256 totalCollateralValue)
+        returns (USDUint256 totalCollateralValue)
     {
         return GlobalPerpsMarket.load().totalCollateralValue();
     }

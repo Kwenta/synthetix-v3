@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
+import {USDUint256, USDInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for global Perps Market settings.
@@ -33,9 +34,9 @@ interface IGlobalPerpsMarketModule {
      * @param maxKeeperScalingRatioD18 Scaling used to calculate the Maximum keeper reward together with maxKeeperRewardUsd.
      */
     event KeeperRewardGuardsSet(
-        uint256 minKeeperRewardUsd,
+        USDUint256 minKeeperRewardUsd,
         uint256 minKeeperProfitRatioD18,
-        uint256 maxKeeperRewardUsd,
+        USDUint256 maxKeeperRewardUsd,
         uint256 maxKeeperScalingRatioD18
     );
 
@@ -145,9 +146,9 @@ interface IGlobalPerpsMarketModule {
      * @param maxKeeperScalingRatioD18 Scaling used to calculate the Maximum keeper reward together with maxKeeperRewardUsd.
      */
     function setKeeperRewardGuards(
-        uint256 minKeeperRewardUsd,
+        USDUint256 minKeeperRewardUsd,
         uint256 minKeeperProfitRatioD18,
-        uint256 maxKeeperRewardUsd,
+        USDUint256 maxKeeperRewardUsd,
         uint256 maxKeeperScalingRatioD18
     ) external;
 
@@ -162,9 +163,9 @@ interface IGlobalPerpsMarketModule {
         external
         view
         returns (
-            uint256 minKeeperRewardUsd,
+            USDUint256 minKeeperRewardUsd,
             uint256 minKeeperProfitRatioD18,
-            uint256 maxKeeperRewardUsd,
+            USDUint256 maxKeeperRewardUsd,
             uint256 maxKeeperScalingRatioD18
         );
 
@@ -172,7 +173,7 @@ interface IGlobalPerpsMarketModule {
      * @notice Gets the total collateral value of all deposited collateral from all traders.
      * @return totalCollateralValue value of all collateral
      */
-    function totalGlobalCollateralValue() external view returns (uint256 totalCollateralValue);
+    function totalGlobalCollateralValue() external view returns (USDUint256 totalCollateralValue);
 
     /**
      * @notice Sets the fee collector contract.

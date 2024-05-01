@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.11 <0.9.0;
 
+import {USDUint256, USDInt256, QuantoInt256, BaseQuantoPerUSDInt128, QuantoUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
+
 /**
  * @title Account module
  */
@@ -64,14 +66,15 @@ interface IPerpsAccountModule {
      * @param accountId Id of the account.
      * @return collateralValue total collateral value of the account. USD denominated.
      */
-    function totalCollateralValue(uint128 accountId) external view returns (uint256);
+    function totalCollateralValue(uint128 accountId) external view returns (USDUint256);
 
     /**
-     * @notice Gets the account's total open interest value.
+     * @notice Gets the account's total open interest value converted from the quanto asset to USD.
      * @param accountId Id of the account.
      * @return openInterestValue total open interest value of the account.
+     * @dev conversion to USD needs to happen because different markets can have different quanto assets.
      */
-    function totalAccountOpenInterest(uint128 accountId) external view returns (uint256);
+    function totalAccountOpenInterest(uint128 accountId) external view returns (USDUint256);
 
     /**
      * @notice Gets the details of an open position.
@@ -88,7 +91,7 @@ interface IPerpsAccountModule {
     )
         external
         view
-        returns (int256 totalPnl, int256 accruedFunding, int128 positionSize, uint256 owedInterest);
+        returns (QuantoInt256 totalPnl, QuantoInt256 accruedFunding, BaseQuantoPerUSDInt128 positionSize, QuantoUint256 owedInterest);
 
     /**
      * @notice Gets an account open position data for a given account id and market id
@@ -99,14 +102,14 @@ interface IPerpsAccountModule {
     function getOpenPositionSize(
         uint128 accountId,
         uint128 marketId
-    ) external view returns (int128 positionSize);
+    ) external view returns (BaseQuantoPerUSDInt128 positionSize);
 
     /**
      * @notice Gets the available margin of an account. It can be negative due to pnl.
      * @param accountId Id of the account.
      * @return availableMargin available margin of the position.
      */
-    function getAvailableMargin(uint128 accountId) external view returns (int256 availableMargin);
+    function getAvailableMargin(uint128 accountId) external view returns (USDInt256 availableMargin);
 
     /**
      * @notice Gets the exact withdrawable amount a trader has available from this account while holding the account's current positions.
@@ -115,7 +118,7 @@ interface IPerpsAccountModule {
      */
     function getWithdrawableMargin(
         uint128 accountId
-    ) external view returns (int256 withdrawableMargin);
+    ) external view returns (USDInt256 withdrawableMargin);
 
     /**
      * @notice Gets the initial/maintenance margins across all positions that an account has open.
@@ -131,8 +134,8 @@ interface IPerpsAccountModule {
         external
         view
         returns (
-            uint256 requiredInitialMargin,
-            uint256 requiredMaintenanceMargin,
-            uint256 maxLiquidationReward
+            USDUint256 requiredInitialMargin,
+            USDUint256 requiredMaintenanceMargin,
+            USDUint256 maxLiquidationReward
         );
 }

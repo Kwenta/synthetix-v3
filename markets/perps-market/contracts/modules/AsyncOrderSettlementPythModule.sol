@@ -4,7 +4,7 @@ pragma solidity >=0.8.11 <0.9.0;
 import {ERC2771Context} from "@synthetixio/core-contracts/contracts/utils/ERC2771Context.sol";
 import {FeatureFlag} from "@synthetixio/core-modules/contracts/storage/FeatureFlag.sol";
 import {IAsyncOrderSettlementPythModule} from "../interfaces/IAsyncOrderSettlementPythModule.sol";
-import {PerpsAccount, SNX_USD_MARKET_ID} from "../storage/PerpsAccount.sol";
+import {PerpsAccount} from "../storage/PerpsAccount.sol";
 import {MathUtil} from "../utils/MathUtil.sol";
 import {Flags} from "../utils/Flags.sol";
 import {PerpsMarket} from "../storage/PerpsMarket.sol";
@@ -14,11 +14,14 @@ import {GlobalPerpsMarket} from "../storage/GlobalPerpsMarket.sol";
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
 import {PerpsMarketFactory} from "../storage/PerpsMarketFactory.sol";
 import {GlobalPerpsMarketConfiguration} from "../storage/GlobalPerpsMarketConfiguration.sol";
+import {PerpsMarketConfiguration} from "../storage/PerpsMarketConfiguration.sol";
+import {PerpsPrice} from "../storage/PerpsPrice.sol";
 import {IMarketEvents} from "../interfaces/IMarketEvents.sol";
 import {IAccountEvents} from "../interfaces/IAccountEvents.sol";
 import {KeeperCosts} from "../storage/KeeperCosts.sol";
 import {IPythERC7412Wrapper} from "../interfaces/external/IPythERC7412Wrapper.sol";
 import {SafeCastU256, SafeCastI256} from "@synthetixio/core-contracts/contracts/utils/SafeCast.sol";
+import {USDUint256, USDPerBaseUint256, QuantoUint256, QuantoInt256, USDPerQuantoUint256, InteractionsQuantoUint256, InteractionsQuantoInt256, InteractionsUSDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for settling async orders using pyth as price feed.
@@ -39,6 +42,8 @@ contract AsyncOrderSettlementPythModule is
     using GlobalPerpsMarketConfiguration for GlobalPerpsMarketConfiguration.Data;
     using Position for Position.Data;
     using KeeperCosts for KeeperCosts.Data;
+    using InteractionsQuantoUint256 for QuantoUint256;
+    using InteractionsQuantoInt256 for QuantoInt256;
 
     /**
      * @inheritdoc IAsyncOrderSettlementPythModule
@@ -57,14 +62,14 @@ contract AsyncOrderSettlementPythModule is
                 (asyncOrder.commitmentTime + settlementStrategy.commitmentPriceDelay).to64()
             );
 
-        _settleOrder(offchainPrice.toUint(), asyncOrder, settlementStrategy);
+        _settleOrder(USDPerBaseUint256.wrap(offchainPrice.toUint()), asyncOrder, settlementStrategy);
     }
 
     /**
      * @dev used for settleing an order.
      */
     function _settleOrder(
-        uint256 price,
+        USDPerBaseUint256 price,
         AsyncOrder.Data storage asyncOrder,
         SettlementStrategy.Data storage settlementStrategy
     ) private {
@@ -88,12 +93,16 @@ contract AsyncOrderSettlementPythModule is
         (runtime.pnl, , runtime.chargedInterest, runtime.accruedFunding, , ) = oldPosition.getPnl(
             runtime.fillPrice
         );
-        runtime.pnlUint = MathUtil.abs(runtime.pnl);
+        runtime.pnlUint = runtime.pnl.abs();
 
-        if (runtime.pnl > 0) {
-            perpsAccount.updateCollateralAmount(SNX_USD_MARKET_ID, runtime.pnl);
-        } else if (runtime.pnl < 0) {
-            runtime.amountToDeduct += runtime.pnlUint;
+        if (runtime.pnl.greaterThanZero()) {
+            PerpsMarketConfiguration.Data storage marketConfig = PerpsMarketConfiguration.load(
+                runtime.marketId
+            );
+            perpsAccount.updateCollateralAmount(marketConfig.quantoSynthMarketId, runtime.pnl.unwrap());
+        } else if (runtime.pnl.lessThanZero()) {
+            USDPerQuantoUint256 quantoPrice = PerpsPrice.getCurrentQuantoPrice(runtime.marketId, PerpsPrice.Tolerance.DEFAULT);
+            runtime.amountToDeduct = runtime.amountToDeduct + runtime.pnlUint.mulDecimalToUSD(quantoPrice);
         }
 
         // after pnl is realized, update position
@@ -116,7 +125,7 @@ contract AsyncOrderSettlementPythModule is
 
         // since margin is deposited when trader deposits, as long as the owed collateral is deducted
         // from internal accounting, fees are automatically realized by the stakers
-        if (runtime.amountToDeduct > 0) {
+        if (runtime.amountToDeduct.greaterThanZero()) {
             (runtime.deductedSynthIds, runtime.deductedAmount) = perpsAccount.deductFromAccount(
                 runtime.amountToDeduct
             );
@@ -138,7 +147,7 @@ contract AsyncOrderSettlementPythModule is
             settlementStrategy.settlementReward +
             KeeperCosts.load().getSettlementKeeperCosts();
 
-        if (runtime.settlementReward > 0) {
+        if (runtime.settlementReward.greaterThanZero()) {
             // pay keeper
             factory.withdrawMarketUsd(ERC2771Context._msgSender(), runtime.settlementReward);
         }
@@ -146,7 +155,7 @@ contract AsyncOrderSettlementPythModule is
         (runtime.referralFees, runtime.feeCollectorFees) = GlobalPerpsMarketConfiguration
             .load()
             .collectFees(
-                runtime.totalFees - runtime.settlementReward, // totalFees includes settlement reward so we remove it
+                (runtime.totalFees - runtime.settlementReward), // totalFees includes settlement reward so we remove it
                 asyncOrder.request.referrer,
                 factory
             );

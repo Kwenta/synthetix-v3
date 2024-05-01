@@ -3,6 +3,7 @@ pragma solidity >=0.8.11 <0.9.0;
 
 import {AsyncOrder} from "../storage/AsyncOrder.sol";
 import {SettlementStrategy} from "../storage/SettlementStrategy.sol";
+import {BaseQuantoPerUSDInt128, USDPerBaseUint256, QuantoUint256, USDUint256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 /**
  * @title Module for committing and settling async orders.
@@ -25,8 +26,8 @@ interface IAsyncOrderModule {
         uint128 indexed marketId,
         uint128 indexed accountId,
         SettlementStrategy.Type orderType,
-        int128 sizeDelta,
-        uint256 acceptablePrice,
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 acceptablePrice,
         uint256 commitmentTime,
         uint256 expectedPriceTime,
         uint256 settlementTime,
@@ -47,8 +48,8 @@ interface IAsyncOrderModule {
     event PreviousOrderExpired(
         uint128 indexed marketId,
         uint128 indexed accountId,
-        int128 sizeDelta,
-        uint256 acceptablePrice,
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 acceptablePrice,
         uint256 commitmentTime,
         bytes32 indexed trackingCode
     );
@@ -61,7 +62,7 @@ interface IAsyncOrderModule {
      */
     function commitOrder(
         AsyncOrder.OrderCommitmentRequest memory commitment
-    ) external returns (AsyncOrder.Data memory retOrder, uint256 fees);
+    ) external returns (AsyncOrder.Data memory retOrder, USDUint256 fees);
 
     /**
      * @notice Get async order claim details
@@ -80,8 +81,8 @@ interface IAsyncOrderModule {
      */
     function computeOrderFees(
         uint128 marketId,
-        int128 sizeDelta
-    ) external view returns (uint256 orderFees, uint256 fillPrice);
+        BaseQuantoPerUSDInt128 sizeDelta
+    ) external view returns (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice);
 
     /**
      * @notice Simulates what the order fee would be for the given market with the specified size.
@@ -94,9 +95,9 @@ interface IAsyncOrderModule {
      */
     function computeOrderFeesWithPrice(
         uint128 marketId,
-        int128 sizeDelta,
-        uint256 price
-    ) external view returns (uint256 orderFees, uint256 fillPrice);
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 price
+    ) external view returns (QuantoUint256 orderFees, USDPerBaseUint256 fillPrice);
 
     /**
      * @notice Gets the settlement cost including keeper rewards and keeper costs.
@@ -107,7 +108,7 @@ interface IAsyncOrderModule {
     function getSettlementRewardCost(
         uint128 marketId,
         uint128 settlementStrategyId
-    ) external view returns (uint256);
+    ) external view returns (USDUint256);
 
     /**
      * @notice For a given market, account id, and a position size, returns the required total account margin for this order to succeed
@@ -120,8 +121,8 @@ interface IAsyncOrderModule {
     function requiredMarginForOrder(
         uint128 marketId,
         uint128 accountId,
-        int128 sizeDelta
-    ) external view returns (uint256 requiredMargin);
+        BaseQuantoPerUSDInt128 sizeDelta
+    ) external view returns (USDUint256 requiredMargin);
 
     /**
      * @notice For a given market, account id, and a position size, and expected price returns the required total account margin for this order to succeed
@@ -135,7 +136,7 @@ interface IAsyncOrderModule {
     function requiredMarginForOrderWithPrice(
         uint128 marketId,
         uint128 accountId,
-        int128 sizeDelta,
-        uint256 price
-    ) external view returns (uint256 requiredMargin);
+        BaseQuantoPerUSDInt128 sizeDelta,
+        USDPerBaseUint256 price
+    ) external view returns (USDUint256 requiredMargin);
 }

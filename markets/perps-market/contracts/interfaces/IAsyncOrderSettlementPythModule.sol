@@ -3,6 +3,7 @@ pragma solidity >=0.8.11 <0.9.0;
 
 import {Position} from "../storage/Position.sol";
 import {MarketUpdate} from "../storage/MarketUpdate.sol";
+import {BaseQuantoPerUSDInt128, USDPerBaseUint256, USDUint256, QuantoUint256, QuantoInt256} from '@kwenta/quanto-dimensions/src/UnitTypes.sol';
 
 interface IAsyncOrderSettlementPythModule {
     /**
@@ -24,15 +25,15 @@ interface IAsyncOrderSettlementPythModule {
     event OrderSettled(
         uint128 indexed marketId,
         uint128 indexed accountId,
-        uint256 fillPrice,
-        int256 pnl,
-        int256 accruedFunding,
-        int128 sizeDelta,
-        int128 newSize,
-        uint256 totalFees,
-        uint256 referralFees,
-        uint256 collectedFees,
-        uint256 settlementReward,
+        USDPerBaseUint256 fillPrice,
+        QuantoInt256 pnl,
+        QuantoInt256 accruedFunding,
+        BaseQuantoPerUSDInt128 sizeDelta,
+        BaseQuantoPerUSDInt128 newSize,
+        USDUint256 totalFees,
+        USDUint256 referralFees,
+        USDUint256 collectedFees,
+        USDUint256 settlementReward,
         bytes32 indexed trackingCode,
         address settler
     );
@@ -42,23 +43,23 @@ interface IAsyncOrderSettlementPythModule {
      * @param accountId Id of the account used for the trade.
      * @param interest interest charges
      */
-    event InterestCharged(uint128 indexed accountId, uint256 interest);
+    event InterestCharged(uint128 indexed accountId, QuantoUint256 interest);
 
     // only used due to stack too deep during settlement
     struct SettleOrderRuntime {
         uint128 marketId;
         uint128 accountId;
-        int128 sizeDelta;
-        int256 pnl;
-        uint256 chargedInterest;
-        int256 accruedFunding;
-        uint256 pnlUint;
-        uint256 amountToDeduct;
-        uint256 settlementReward;
-        uint256 fillPrice;
-        uint256 totalFees;
-        uint256 referralFees;
-        uint256 feeCollectorFees;
+        BaseQuantoPerUSDInt128 sizeDelta;
+        QuantoInt256 pnl;
+        QuantoUint256 chargedInterest;
+        QuantoInt256 accruedFunding;
+        QuantoUint256 pnlUint;
+        USDUint256 amountToDeduct;
+        USDUint256 settlementReward;
+        USDPerBaseUint256 fillPrice;
+        USDUint256 totalFees;
+        USDUint256 referralFees;
+        USDUint256 feeCollectorFees;
         Position.Data newPosition;
         MarketUpdate.Data updateData;
         uint256 synthDeductionIterator;

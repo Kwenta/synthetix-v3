@@ -11,6 +11,7 @@ import {PerpsAccount, SNX_USD_MARKET_ID} from "./PerpsAccount.sol";
 import {PerpsMarket} from "./PerpsMarket.sol";
 import {PerpsMarketFactory} from "./PerpsMarketFactory.sol";
 import {ISpotMarketSystem} from "../interfaces/external/ISpotMarketSystem.sol";
+import {USDUint256, USDInt256, InteractionsUSDUint256, InteractionsUSDInt256} from "@kwenta/quanto-dimensions/src/UnitTypes.sol";
 
 /**
  * @title This library contains all global perps market data
@@ -21,6 +22,8 @@ library GlobalPerpsMarket {
     using SafeCastU128 for uint128;
     using DecimalMath for uint256;
     using SetUtil for SetUtil.UintSet;
+    using InteractionsUSDUint256 for USDUint256;
+    using InteractionsUSDInt256 for USDInt256;
 
     bytes32 private constant _SLOT_GLOBAL_PERPS_MARKET =
         keccak256(abi.encode("io.synthetix.perps-market.GlobalPerpsMarket"));
@@ -71,32 +74,32 @@ library GlobalPerpsMarket {
 
     function utilizationRate(
         Data storage self
-    ) internal view returns (uint128 rate, uint256 delegatedCollateralValue, uint256 lockedCredit) {
-        uint256 withdrawableUsd = PerpsMarketFactory.totalWithdrawableUsd();
-        int256 delegatedCollateralValueInt = withdrawableUsd.toInt() -
+    ) internal view returns (uint128 rate, USDUint256 delegatedCollateralValue, USDUint256 lockedCredit) {
+        USDUint256 withdrawableUsd = PerpsMarketFactory.totalWithdrawableUsd();
+        USDInt256 delegatedCollateralValueInt = withdrawableUsd.toInt() -
             totalCollateralValue(self).toInt();
         lockedCredit = minimumCredit(self);
-        if (delegatedCollateralValueInt <= 0) {
-            return (DecimalMath.UNIT_UINT128, 0, lockedCredit);
+        if (delegatedCollateralValueInt.lessThanOrEqualToZero()) {
+            return (DecimalMath.UNIT_UINT128, InteractionsUSDUint256.zero(), lockedCredit);
         }
 
         delegatedCollateralValue = delegatedCollateralValueInt.toUint();
 
-        rate = lockedCredit.divDecimal(delegatedCollateralValue).to128();
+        rate = lockedCredit.divDecimalToDimensionless(delegatedCollateralValue).to128();
     }
 
     function minimumCredit(
         Data storage self
-    ) internal view returns (uint256 accumulatedMinimumCredit) {
+    ) internal view returns (USDUint256 accumulatedMinimumCredit) {
         uint256 activeMarketsLength = self.activeMarkets.length();
         for (uint256 i = 1; i <= activeMarketsLength; i++) {
             uint128 marketId = self.activeMarkets.valueAt(i).to128();
 
-            accumulatedMinimumCredit += PerpsMarket.requiredCredit(marketId);
+            accumulatedMinimumCredit = accumulatedMinimumCredit + PerpsMarket.requiredCredit(marketId);
         }
     }
 
-    function totalCollateralValue(Data storage self) internal view returns (uint256 total) {
+    function totalCollateralValue(Data storage self) internal view returns (USDUint256 total) {
         ISpotMarketSystem spotMarket = PerpsMarketFactory.load().spotMarket;
         SetUtil.UintSet storage activeCollateralTypes = self.activeCollateralTypes;
         uint256 activeCollateralLength = activeCollateralTypes.length();
@@ -104,14 +107,14 @@ library GlobalPerpsMarket {
             uint128 synthMarketId = activeCollateralTypes.valueAt(i).to128();
 
             if (synthMarketId == SNX_USD_MARKET_ID) {
-                total += self.collateralAmounts[synthMarketId];
+                total = total + USDUint256.wrap(self.collateralAmounts[synthMarketId]);
             } else {
                 (uint256 collateralValue, ) = spotMarket.quoteSellExactIn(
                     synthMarketId,
                     self.collateralAmounts[synthMarketId],
                     Price.Tolerance.DEFAULT
                 );
-                total += collateralValue;
+                total = total + USDUint256.wrap(collateralValue);
             }
         }
     }
